@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, Plus, X, Command, SlidersHorizontal, LayoutGrid, 
   List as ListIcon, Database, ArrowUpRight, Hash, Tag, 
-  Check, Save, Trash2, Download, Upload, Cpu, Zap, PenTool, Mail, BarChart2, AlertTriangle
+  Check, Save, Trash2, Download, Upload, Cpu, Zap, PenTool, Mail, BarChart2, AlertTriangle, Menu
 } from 'lucide-react';
 import { Tool, ToolCategory, PricingBucket, AiEnrichmentResponse } from './types';
 import { loadTools, saveTools, exportData } from './services/storageService';
@@ -68,13 +68,17 @@ const Sidebar = ({
   activeCategory, 
   onCategorySelect,
   onExport,
-  onImport
+  onImport,
+  isOpen,
+  onClose
 }: { 
   categories: string[], 
   activeCategory: string, 
   onCategorySelect: (c: string) => void,
   onExport: () => void,
-  onImport: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onImport: (e: React.ChangeEvent<HTMLInputElement>) => void,
+  isOpen: boolean,
+  onClose: () => void
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,66 +91,95 @@ const Sidebar = ({
     return <Hash size={18} />;
   };
 
+  // Helper to handle category click on mobile
+  const handleNavClick = (cat: string) => {
+    onCategorySelect(cat);
+    onClose(); // Close drawer on mobile selection
+  };
+
   return (
-    <aside className="w-64 h-screen bg-black border-r border-border flex flex-col fixed left-0 top-0 z-20 transition-all duration-300">
-      <div className="p-6">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-500/20">
-            <Database size={16} className="text-white" />
+    <>
+      {/* Mobile Backdrop */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-30 md:hidden animate-fade-in-up" 
+          onClick={onClose}
+        />
+      )}
+
+      <aside className={`
+        fixed top-0 bottom-0 left-0 z-40 w-64 bg-black border-r border-border flex flex-col 
+        transition-transform duration-300 ease-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
+        md:translate-x-0
+      `}>
+        <div className="p-6 relative">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-500/20">
+              <Database size={16} className="text-white" />
+            </div>
+            <h1 className="font-bold text-xl tracking-tight text-white">Tool Vault</h1>
           </div>
-          <h1 className="font-bold text-xl tracking-tight text-white">Tool Vault</h1>
-        </div>
-
-        <nav className="space-y-1 overflow-y-auto max-h-[calc(100vh-200px)] custom-scrollbar">
+          
+          {/* Mobile Close Button */}
           <button 
-            onClick={() => onCategorySelect('All')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${activeCategory === 'All' ? 'bg-surface text-primary border border-border' : 'text-secondary hover:text-white hover:bg-surface/50'}`}
+            onClick={onClose} 
+            className="absolute top-6 right-4 md:hidden text-secondary hover:text-white p-2"
           >
-            <LayoutGrid size={18} />
-            All Tools
+            <X size={20} />
           </button>
-          
-          <div className="pt-6 pb-3 px-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Categories</div>
-          
-          {categories.map(cat => (
-            <button 
-              key={cat}
-              onClick={() => onCategorySelect(cat)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${activeCategory === cat ? 'bg-surface text-primary border border-border' : 'text-secondary hover:text-white hover:bg-surface/50'}`}
-            >
-              {getIcon(cat)}
-              <span className="truncate">{cat}</span>
-            </button>
-          ))}
-        </nav>
-      </div>
 
-      <div className="mt-auto p-6 border-t border-border bg-black">
-        <div className="flex gap-2">
-           <button 
-            onClick={onExport}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-surface border border-border text-xs font-medium text-secondary hover:text-white hover:border-gray-500 transition-all hover:bg-surfaceHover"
-            title="Export Data"
-          >
-            <Download size={14} /> Export
-          </button>
-           <button 
-            onClick={() => fileInputRef.current?.click()}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-surface border border-border text-xs font-medium text-secondary hover:text-white hover:border-gray-500 transition-all hover:bg-surfaceHover"
-            title="Import JSON"
-          >
-            <Upload size={14} /> Import
-          </button>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            className="hidden" 
-            accept=".json" 
-            onChange={onImport}
-          />
+          <nav className="space-y-1 overflow-y-auto max-h-[calc(100vh-200px)] custom-scrollbar">
+            <button 
+              onClick={() => handleNavClick('All')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${activeCategory === 'All' ? 'bg-surface text-primary border border-border' : 'text-secondary hover:text-white hover:bg-surface/50'}`}
+            >
+              <LayoutGrid size={18} />
+              All Tools
+            </button>
+            
+            <div className="pt-6 pb-3 px-3 text-[10px] font-bold text-gray-600 uppercase tracking-widest">Categories</div>
+            
+            {categories.map(cat => (
+              <button 
+                key={cat}
+                onClick={() => handleNavClick(cat)}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${activeCategory === cat ? 'bg-surface text-primary border border-border' : 'text-secondary hover:text-white hover:bg-surface/50'}`}
+              >
+                {getIcon(cat)}
+                <span className="truncate">{cat}</span>
+              </button>
+            ))}
+          </nav>
         </div>
-      </div>
-    </aside>
+
+        <div className="mt-auto p-6 border-t border-border bg-black">
+          <div className="flex gap-2">
+             <button 
+              onClick={onExport}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-surface border border-border text-xs font-medium text-secondary hover:text-white hover:border-gray-500 transition-all hover:bg-surfaceHover"
+              title="Export Data"
+            >
+              <Download size={14} /> Export
+            </button>
+             <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-surface border border-border text-xs font-medium text-secondary hover:text-white hover:border-gray-500 transition-all hover:bg-surfaceHover"
+              title="Import JSON"
+            >
+              <Upload size={14} /> Import
+            </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              className="hidden" 
+              accept=".json" 
+              onChange={onImport}
+            />
+          </div>
+        </div>
+      </aside>
+    </>
   );
 };
 
@@ -516,10 +549,10 @@ const ToolDetail = ({
       />
       
       {/* Drawer */}
-      <div className="w-full max-w-3xl h-full bg-surface border-l border-border shadow-2xl overflow-hidden flex flex-col pointer-events-auto relative transform transition-transform duration-300 ease-out animate-slide-in-right">
+      <div className="w-full md:max-w-3xl h-full bg-surface border-l border-border shadow-2xl overflow-hidden flex flex-col pointer-events-auto relative transform transition-transform duration-300 ease-out animate-slide-in-right">
         
         {/* Header Actions */}
-        <div className="absolute top-6 right-6 flex items-center gap-2 z-10">
+        <div className="absolute top-6 right-4 md:right-6 flex items-center gap-2 z-10">
           {isEditing ? (
             <>
               <button 
@@ -564,11 +597,11 @@ const ToolDetail = ({
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto h-full p-10 custom-scrollbar">
+        <div className="overflow-y-auto h-full p-6 md:p-10 custom-scrollbar">
           
           {/* Hero Section */}
-          <div className="mb-12 pr-20">
-            <div className="flex items-start gap-6 mb-8">
+          <div className="mb-12 pr-0 md:pr-20">
+            <div className="flex flex-col md:flex-row items-start gap-6 mb-8">
               <div className="w-24 h-24 rounded-2xl bg-black border border-border flex items-center justify-center shadow-lg overflow-hidden shrink-0 relative p-1">
                  <div className="w-full h-full rounded-xl overflow-hidden bg-surface">
                    <ToolIcon url={editedTool.logoUrl} websiteUrl={editedTool.url} name={editedTool.name} />
@@ -577,15 +610,15 @@ const ToolDetail = ({
               <div className="w-full pt-1">
                 {isEditing ? (
                    <input 
-                    className="text-5xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none w-full mb-3 pb-2"
+                    className="text-4xl md:text-5xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none w-full mb-3 pb-2"
                     value={editedTool.name}
                     onChange={(e) => setEditedTool({...editedTool, name: e.target.value})}
                    />
                 ) : (
-                   <h1 className="text-5xl font-bold text-white mb-3 tracking-tight">{editedTool.name}</h1>
+                   <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight">{editedTool.name}</h1>
                 )}
                 
-                <div className="flex items-center gap-3 text-sm">
+                <div className="flex flex-wrap items-center gap-3 text-sm">
                    {isEditing ? (
                       <>
                         <input 
@@ -602,10 +635,10 @@ const ToolDetail = ({
                    ) : (
                       <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">{editedTool.category}</span>
                    )}
-                   <span className="w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
+                   <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
                    {isEditing ? (
                       <input 
-                        className="bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none w-full"
+                        className="bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none w-full mt-2 md:mt-0"
                         value={editedTool.url}
                         onChange={(e) => setEditedTool({...editedTool, url: e.target.value})}
                       />
@@ -626,7 +659,7 @@ const ToolDetail = ({
                   onChange={(e) => setEditedTool({...editedTool, summary: e.target.value})}
                 />
             ) : (
-              <p className="text-2xl text-gray-200 font-light leading-relaxed">
+              <p className="text-xl md:text-2xl text-gray-200 font-light leading-relaxed">
                 {editedTool.summary}
               </p>
             )}
@@ -701,6 +734,7 @@ function App() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Selection & Delete state
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
@@ -810,24 +844,34 @@ function App() {
         onCategorySelect={setActiveCategory}
         onExport={() => exportData(tools)}
         onImport={handleImport}
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
       />
 
-      <main className="ml-64 flex-1 flex flex-col h-screen overflow-hidden">
+      <main className="ml-0 md:ml-64 flex-1 flex flex-col h-screen overflow-hidden">
         
-        <header className="h-20 border-b border-border bg-black/80 backdrop-blur-md px-8 flex items-center justify-between sticky top-0 z-10">
-          <div className="relative w-96 group">
+        <header className="h-16 md:h-20 border-b border-border bg-black/80 backdrop-blur-md px-4 md:px-8 flex items-center justify-between sticky top-0 z-10 gap-3">
+          
+          <button 
+            className="md:hidden p-2 -ml-2 text-secondary hover:text-white"
+            onClick={() => setIsMobileMenuOpen(true)}
+          >
+            <Menu size={24} />
+          </button>
+
+          <div className="relative flex-1 max-w-lg group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-primary transition-colors" size={18} />
             <input 
               type="text" 
-              placeholder="Search tools, tags, notes..." 
+              placeholder="Search..." 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-surface border border-border rounded-full py-2.5 pl-11 pr-5 text-sm text-gray-200 focus:outline-none focus:border-primary/50 transition-all shadow-sm"
+              className="w-full bg-surface border border-border rounded-full py-2 md:py-2.5 pl-11 pr-5 text-sm text-gray-200 focus:outline-none focus:border-primary/50 transition-all shadow-sm"
             />
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="flex bg-surface rounded-full p-1 border border-border">
+          <div className="flex items-center gap-2 md:gap-4 shrink-0">
+            <div className="hidden sm:flex bg-surface rounded-full p-1 border border-border">
               <button 
                 onClick={() => setViewMode('grid')}
                 className={`p-2 rounded-full transition-all duration-300 ${viewMode === 'grid' ? 'bg-black text-primary shadow-sm' : 'text-gray-500 hover:text-gray-300'}`}
@@ -844,22 +888,23 @@ function App() {
             
             <button 
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-full font-bold text-sm hover:bg-primaryHover transition-all shadow-[0_0_20px_-5px_rgba(236,72,153,0.4)] hover:shadow-[0_0_25px_-5px_rgba(236,72,153,0.6)]"
+              className="flex items-center justify-center gap-2 bg-primary text-white w-10 h-10 md:w-auto md:h-auto md:px-5 md:py-2.5 rounded-full font-bold text-sm hover:bg-primaryHover transition-all shadow-[0_0_20px_-5px_rgba(236,72,153,0.4)] hover:shadow-[0_0_25px_-5px_rgba(236,72,153,0.6)]"
             >
-              <Plus size={18} /> Add Tool
+              <Plus size={20} className="md:w-[18px] md:h-[18px]" /> 
+              <span className="hidden md:inline">Add Tool</span>
             </button>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
           
-          <div className="mb-8 flex justify-between items-end">
+          <div className="mb-6 md:mb-8 flex justify-between items-end">
             <div>
-              <h2 className="text-3xl font-bold text-white mb-2 tracking-tight">{activeCategory === 'All' ? 'Library' : activeCategory}</h2>
-              <p className="text-secondary text-sm">{filteredTools.length} tools found</p>
+              <h2 className="text-2xl md:text-3xl font-bold text-white mb-1 md:mb-2 tracking-tight">{activeCategory === 'All' ? 'Library' : activeCategory}</h2>
+              <p className="text-secondary text-xs md:text-sm">{filteredTools.length} tools found</p>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-2 hidden md:flex">
               <button className="flex items-center gap-2 px-4 py-2 rounded-full border border-border bg-surface text-xs font-medium text-secondary hover:text-white hover:border-white/20 transition-all">
                 Pricing <SlidersHorizontal size={12} />
               </button>
@@ -867,42 +912,42 @@ function App() {
           </div>
 
           {filteredTools.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-80 border border-dashed border-border rounded-3xl bg-surface/30">
-              <div className="w-20 h-20 rounded-full bg-surface flex items-center justify-center mb-6 text-gray-600 shadow-xl">
-                <Search size={40} />
+            <div className="flex flex-col items-center justify-center h-64 md:h-80 border border-dashed border-border rounded-3xl bg-surface/30 px-4 text-center">
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-surface flex items-center justify-center mb-4 md:mb-6 text-gray-600 shadow-xl">
+                <Search size={32} className="md:w-10 md:h-10" />
               </div>
-              <p className="text-gray-400 font-medium text-lg">No tools found matching your criteria.</p>
+              <p className="text-gray-400 font-medium text-base md:text-lg">No tools found.</p>
               <button onClick={() => {setSearchQuery(''); setActiveCategory('All')}} className="mt-4 text-primary text-sm font-bold hover:underline">Clear filters</button>
             </div>
           ) : (
-            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" : "flex flex-col gap-3"}>
+            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6" : "flex flex-col gap-3"}>
               {filteredTools.map(tool => (
                 <div 
                   key={tool.id}
                   onClick={() => setSelectedToolId(tool.id)}
                   className={`
                     group relative bg-surface border border-border hover:border-primary/50 transition-all duration-300 cursor-pointer overflow-hidden
-                    ${viewMode === 'grid' ? 'rounded-2xl p-6 hover:-translate-y-1 hover:shadow-glow' : 'rounded-xl p-4 flex items-center gap-6 hover:bg-surfaceHover'}
+                    ${viewMode === 'grid' ? 'rounded-2xl p-5 md:p-6 hover:-translate-y-1 hover:shadow-glow' : 'rounded-xl p-4 flex items-center gap-4 md:gap-6 hover:bg-surfaceHover'}
                   `}
                 >
                   <div className={`flex ${viewMode === 'grid' ? 'flex-col items-start' : 'items-center w-full'}`}>
-                    <div className="mb-5 shrink-0 relative">
-                       <div className="w-14 h-14 rounded-xl bg-black border border-border flex items-center justify-center text-lg font-bold text-gray-500 group-hover:border-primary/50 transition-colors overflow-hidden relative shadow-lg">
+                    <div className="mb-4 md:mb-5 shrink-0 relative">
+                       <div className="w-12 h-12 md:w-14 md:h-14 rounded-xl bg-black border border-border flex items-center justify-center text-lg font-bold text-gray-500 group-hover:border-primary/50 transition-colors overflow-hidden relative shadow-lg">
                           <ToolIcon url={tool.logoUrl} websiteUrl={tool.url} name={tool.name} />
                        </div>
                     </div>
                     
                     <div className="flex-1 min-w-0 w-full">
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-bold text-lg text-white group-hover:text-primary transition-colors truncate tracking-tight">{tool.name}</h3>
-                        {viewMode === 'list' && <span className="text-xs font-medium text-secondary px-2.5 py-1 rounded-full bg-black border border-border">{tool.category}</span>}
+                      <div className="flex items-center justify-between mb-1 md:mb-2">
+                        <h3 className="font-bold text-base md:text-lg text-white group-hover:text-primary transition-colors truncate tracking-tight">{tool.name}</h3>
+                        {viewMode === 'list' && <span className="text-[10px] md:text-xs font-medium text-secondary px-2 py-0.5 md:px-2.5 md:py-1 rounded-full bg-black border border-border">{tool.category}</span>}
                       </div>
                       <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed">{tool.summary}</p>
                     </div>
 
                     {viewMode === 'grid' && (
-                      <div className="mt-6 pt-4 border-t border-border/50 w-full flex items-center justify-between text-xs font-medium text-gray-500">
-                        <span className="bg-black px-2.5 py-1 rounded-md border border-border group-hover:border-primary/20 transition-colors">{tool.category}</span>
+                      <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-border/50 w-full flex items-center justify-between text-[10px] md:text-xs font-medium text-gray-500">
+                        <span className="bg-black px-2 py-1 md:px-2.5 rounded-md border border-border group-hover:border-primary/20 transition-colors">{tool.category}</span>
                         <span>{tool.pricingBucket}</span>
                       </div>
                     )}
