@@ -2,16 +2,12 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, Plus, X, LayoutGrid, List as ListIcon, Database, ArrowUpRight, Hash, Tag, 
   Check, Save, Trash2, Download, Upload, Cpu, Zap, PenTool, Mail, BarChart2, AlertTriangle, Menu,
-  Settings, Cloud, LogOut, User as UserIcon, Loader2
+  Settings
 } from 'lucide-react';
-import { Tool, PricingBucket, DEFAULT_CATEGORIES, FirebaseConfig } from './types';
+import ReactMarkdown from 'react-markdown';
+import { Tool, PricingBucket, DEFAULT_CATEGORIES } from './types';
 import { loadTools, saveTools, exportData } from './services/storageService';
 import { enrichToolData } from './services/geminiService';
-import { 
-  initFirebase, loginWithGoogle, logout, subscribeToAuth, 
-  subscribeToTools, saveToolToCloud, deleteToolFromCloud, 
-  subscribeToCategories, saveCategoriesToCloud, getStoredConfig, saveConfig, clearConfig
-} from './services/firebase';
 
 // 0. Shared UI Components
 const ToolIcon = ({ url, websiteUrl, name, className = "" }: { url?: string, websiteUrl?: string, name: string, className?: string }) => {
@@ -74,8 +70,7 @@ const Sidebar = ({
   onImport,
   isOpen,
   onClose,
-  onOpenSettings,
-  user
+  onOpenSettings
 }: { 
   categories: string[], 
   activeCategory: string, 
@@ -84,8 +79,7 @@ const Sidebar = ({
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void,
   isOpen: boolean,
   onClose: () => void,
-  onOpenSettings: () => void,
-  user: any
+  onOpenSettings: () => void
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -159,25 +153,6 @@ const Sidebar = ({
         </div>
 
         <div className="p-6 border-t border-border bg-black space-y-3">
-          {user ? (
-            <div className="flex items-center gap-3 px-2 py-2 mb-2 rounded-lg bg-surface/50 border border-border/50">
-               <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">
-                 {user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full" /> : <UserIcon size={16} />}
-               </div>
-               <div className="flex-1 min-w-0">
-                 <p className="text-xs text-white font-medium truncate">{user.displayName || user.email}</p>
-                 <p className="text-[10px] text-green-500 flex items-center gap-1"><Cloud size={8} /> Synced</p>
-               </div>
-            </div>
-          ) : (
-             <button 
-              onClick={onOpenSettings}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-surface/30 border border-border/50 text-xs font-medium text-secondary hover:text-white hover:border-primary/50 hover:bg-surface/50 transition-all mb-2"
-            >
-              <Cloud size={14} /> Enable Cloud Sync
-            </button>
-          )}
-
           <div className="flex gap-2">
              <button 
               onClick={onExport}
@@ -207,48 +182,19 @@ const Sidebar = ({
   );
 };
 
-// 2. Settings Modal (Firebase & Categories)
+// 2. Settings Modal (Categories Only)
 const SettingsModal = ({
   isOpen,
   onClose,
   categories,
-  onUpdateCategories,
-  user
+  onUpdateCategories
 }: {
   isOpen: boolean,
   onClose: () => void,
   categories: string[],
-  onUpdateCategories: (newCats: string[]) => void,
-  user: any
+  onUpdateCategories: (newCats: string[]) => void
 }) => {
-  const [activeTab, setActiveTab] = useState<'sync' | 'categories'>('sync');
-  const [configInput, setConfigInput] = useState<string>('');
   const [newCat, setNewCat] = useState('');
-  const [isConfigured, setIsConfigured] = useState(false);
-
-  useEffect(() => {
-    const conf = getStoredConfig();
-    if (conf) {
-      setConfigInput(JSON.stringify(conf, null, 2));
-      setIsConfigured(true);
-    }
-  }, [isOpen]);
-
-  const handleSaveConfig = () => {
-    try {
-      const parsed = JSON.parse(configInput);
-      saveConfig(parsed);
-      alert("Configuration saved. App will reload.");
-    } catch {
-      alert("Invalid JSON format");
-    }
-  };
-
-  const handleDisconnect = () => {
-    if (confirm("Disconnect from Firebase? This will revert to local storage.")) {
-      clearConfig();
-    }
-  };
 
   const addCategory = () => {
     if (newCat.trim() && !categories.includes(newCat.trim())) {
@@ -265,76 +211,13 @@ const SettingsModal = ({
 
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-      <div className="bg-surface border border-border rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl shadow-pink-500/10 flex flex-col max-h-[85vh]">
+      <div className="bg-surface border border-border rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl shadow-pink-500/10 flex flex-col max-h-[85vh]">
         <div className="flex justify-between items-center p-6 border-b border-border">
-          <h2 className="text-xl font-bold text-white">Settings</h2>
+          <h2 className="text-xl font-bold text-white">Manage Categories</h2>
           <button onClick={onClose} className="text-secondary hover:text-white"><X size={20} /></button>
         </div>
         
-        <div className="flex border-b border-border">
-           <button onClick={() => setActiveTab('sync')} className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'sync' ? 'text-primary border-b-2 border-primary bg-white/5' : 'text-secondary hover:text-white'}`}>Cloud Sync</button>
-           <button onClick={() => setActiveTab('categories')} className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'categories' ? 'text-primary border-b-2 border-primary bg-white/5' : 'text-secondary hover:text-white'}`}>Categories</button>
-        </div>
-
         <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
-          {activeTab === 'sync' && (
-            <div className="space-y-6">
-              {!isConfigured ? (
-                <>
-                  <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
-                    <h3 className="text-primary font-bold text-sm mb-2 flex items-center gap-2"><Cloud size={16} /> Enable Cloud Sync</h3>
-                    <p className="text-xs text-gray-300 leading-relaxed">
-                      To sync across devices, paste your Firebase Project Configuration object below. 
-                      You can find this in your Firebase Console {'>'} Project Settings {'>'} General.
-                    </p>
-                  </div>
-                  <textarea 
-                    className="w-full h-48 bg-black border border-border rounded-lg p-4 font-mono text-xs text-gray-300 focus:border-primary focus:outline-none"
-                    placeholder={`{\n  "apiKey": "...",\n  "authDomain": "...",\n  ...\n}`}
-                    value={configInput}
-                    onChange={e => setConfigInput(e.target.value)}
-                  />
-                  <button onClick={handleSaveConfig} className="w-full py-2 bg-primary text-white rounded-lg font-bold hover:bg-primaryHover transition-colors">
-                    Save & Connect
-                  </button>
-                </>
-              ) : (
-                <div className="text-center space-y-6">
-                   <div className="w-16 h-16 bg-green-500/10 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                     <Cloud size={32} />
-                   </div>
-                   <h3 className="text-xl font-bold text-white">Cloud Sync Active</h3>
-                   
-                   {!user ? (
-                     <button onClick={() => loginWithGoogle()} className="px-6 py-2.5 bg-white text-black font-bold rounded-full hover:bg-gray-200 transition-colors flex items-center gap-2 mx-auto">
-                        <img src="https://www.google.com/favicon.ico" className="w-4 h-4" /> Sign in with Google
-                     </button>
-                   ) : (
-                     <div className="bg-surface border border-border p-4 rounded-xl flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          {user.photoURL && <img src={user.photoURL} className="w-10 h-10 rounded-full" />}
-                          <div className="text-left">
-                            <div className="text-white font-bold text-sm">{user.displayName}</div>
-                            <div className="text-xs text-gray-500">{user.email}</div>
-                          </div>
-                        </div>
-                        <button onClick={() => logout()} className="p-2 bg-black border border-border rounded-full text-secondary hover:text-white">
-                          <LogOut size={16} />
-                        </button>
-                     </div>
-                   )}
-                   
-                   <div className="pt-8 border-t border-border">
-                     <button onClick={handleDisconnect} className="text-xs text-red-500 hover:text-red-400 font-medium underline">
-                       Disconnect Firebase Config
-                     </button>
-                   </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'categories' && (
             <div className="space-y-4">
                <div className="flex gap-2">
                  <input 
@@ -363,7 +246,6 @@ const SettingsModal = ({
                  Note: Deleting a category will not delete the tools in it, but they may need re-categorization.
                </p>
             </div>
-          )}
         </div>
       </div>
     </div>
@@ -402,7 +284,7 @@ const AddToolModal = ({
 
     setStep('enriching');
     
-    // Call Gemini with dynamic categories
+    // Call Gemini with dynamic categories (Local Client)
     const enriched = await enrichToolData(input, categories);
 
     let finalUrl = enriched.websiteUrl || '';
@@ -612,7 +494,7 @@ const AddToolModal = ({
 // 4. Tool Detail View (Document Style)
 const ToolDetail = ({ 
   tool, 
-  onClose,
+  onClose, 
   onUpdate,
   onRequestDelete,
   categories
@@ -670,17 +552,29 @@ const ToolDetail = ({
         {title}
       </h3>
       {isEditing ? (
-        <textarea
-          className="w-full min-h-[120px] bg-black border border-border rounded-xl p-4 text-gray-300 leading-relaxed focus:border-primary focus:outline-none transition-colors resize-none"
-          value={value}
-          onChange={(e) => setEditedTool({
-            ...editedTool,
-            notes: { ...editedTool.notes, [field]: e.target.value }
-          })}
-        />
+        <>
+          <textarea
+            className="w-full min-h-[120px] bg-black border border-border rounded-xl p-4 text-gray-300 leading-relaxed focus:border-primary focus:outline-none transition-colors resize-none font-mono text-sm"
+            value={value}
+            onChange={(e) => setEditedTool({
+              ...editedTool,
+              notes: { ...editedTool.notes, [field]: e.target.value }
+            })}
+            placeholder="Supports Markdown (e.g. **bold**, [link](url), - list)"
+          />
+          <p className="text-[10px] text-gray-600 mt-1 flex justify-end">Markdown Supported</p>
+        </>
       ) : (
-        <div className="text-gray-300 leading-relaxed whitespace-pre-wrap text-[15px]">
-          {value || <span className="text-gray-600 italic">No notes added yet.</span>}
+        <div className="text-gray-300 leading-relaxed text-[15px] markdown-body">
+          {value ? (
+            <ReactMarkdown components={{
+              a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" />
+            }}>
+              {value}
+            </ReactMarkdown>
+          ) : (
+            <span className="text-gray-600 italic">No notes added yet.</span>
+          )}
         </div>
       )}
     </div>
@@ -913,12 +807,7 @@ const DeleteConfirmationModal = ({
 function App() {
   const [tools, setTools] = useState<Tool[]>([]);
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES);
-  const [isLoaded, setIsLoaded] = useState(false);
   
-  // Auth & Cloud State
-  const [firebaseInitialized, setFirebaseInitialized] = useState(false);
-  const [user, setUser] = useState<any>(null);
-
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -930,102 +819,50 @@ function App() {
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [toolToDelete, setToolToDelete] = useState<Tool | null>(null);
 
-  // 1. Initialize Firebase
+  // 1. Initialize Local Data
   useEffect(() => {
-    const initialized = initFirebase();
-    setFirebaseInitialized(initialized);
-
-    if (initialized) {
-      const unsubAuth = subscribeToAuth((u) => {
-        setUser(u);
-        if (!u) {
-          // If logged out (but initialized), revert to local data or keep empty
-          // Actually, let's load local data if logged out
-          const localTools = loadTools();
-          setTools(localTools);
-          // For categories, stick with default or local if implemented? 
-          // For now, just reset categories to default or keep current in memory
-          setCategories(DEFAULT_CATEGORIES);
-        }
-      });
-      return () => unsubAuth();
-    } else {
-      // Offline / Local Mode
-      const localTools = loadTools();
-      setTools(localTools);
-      // Try to load local categories if we saved them, otherwise default
-      const storedCats = localStorage.getItem('tool_vault_categories');
-      if (storedCats) {
+    const localTools = loadTools();
+    setTools(localTools);
+    
+    const storedCats = localStorage.getItem('tool_vault_categories');
+    if (storedCats) {
+       try {
          setCategories(JSON.parse(storedCats));
-      }
-      setIsLoaded(true);
+       } catch {
+         setCategories(DEFAULT_CATEGORIES);
+       }
     }
   }, []);
 
-  // 2. Data Subscriptions (Cloud vs Local)
+  // 2. Persist Data
   useEffect(() => {
-    if (user && firebaseInitialized) {
-      // CLOUD MODE
-      const unsubTools = subscribeToTools(user.uid, (cloudTools) => {
-        setTools(cloudTools);
-        setIsLoaded(true);
-      });
-      
-      const unsubCats = subscribeToCategories(user.uid, (cloudCats) => {
-        if (cloudCats && cloudCats.length > 0) {
-          setCategories(cloudCats);
-        }
-      });
+    saveTools(tools);
+  }, [tools]);
 
-      return () => {
-        unsubTools();
-        unsubCats();
-      };
-    } else if (!firebaseInitialized && isLoaded) {
-      // LOCAL MODE - Save on changes
-      saveTools(tools);
-      localStorage.setItem('tool_vault_categories', JSON.stringify(categories));
-    }
-  }, [tools, categories, user, firebaseInitialized, isLoaded]);
+  useEffect(() => {
+    localStorage.setItem('tool_vault_categories', JSON.stringify(categories));
+  }, [categories]);
 
   // Actions
   const handleAddTool = (newTool: Tool) => {
-    if (user && firebaseInitialized) {
-      saveToolToCloud(user.uid, newTool);
-    } else {
-      setTools(prev => [newTool, ...prev]);
-    }
+    setTools(prev => [newTool, ...prev]);
     setIsAddModalOpen(false);
   };
 
   const handleUpdateTool = (updatedTool: Tool) => {
-    if (user && firebaseInitialized) {
-      saveToolToCloud(user.uid, updatedTool);
-    } else {
-      setTools(prev => prev.map(t => t.id === updatedTool.id ? updatedTool : t));
-    }
+    setTools(prev => prev.map(t => t.id === updatedTool.id ? updatedTool : t));
   };
 
   const handleDeleteTool = () => {
     if (toolToDelete) {
-      if (user && firebaseInitialized) {
-        deleteToolFromCloud(user.uid, toolToDelete.id);
-      } else {
-        setTools(prev => prev.filter(t => t.id !== toolToDelete.id));
-      }
+      setTools(prev => prev.filter(t => t.id !== toolToDelete.id));
       setToolToDelete(null);
       setSelectedToolId(null);
     }
   };
 
   const handleUpdateCategories = (newCats: string[]) => {
-    if (user && firebaseInitialized) {
-       saveCategoriesToCloud(user.uid, newCats);
-       // Optimistic update for UI responsiveness
-       setCategories(newCats);
-    } else {
-       setCategories(newCats);
-    }
+    setCategories(newCats);
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1040,19 +877,10 @@ function App() {
            const currentIds = new Set(tools.map(t => t.id));
            const uniqueNewTools = imported.filter((t: Tool) => !currentIds.has(t.id));
 
-           if (user && firebaseInitialized) {
-              // Upload one by one to cloud
-              if (confirm(`Import ${uniqueNewTools.length} tools to Cloud?`)) {
-                 for (const t of uniqueNewTools) {
-                    await saveToolToCloud(user.uid, t);
-                 }
-              }
-           } else {
-              if (uniqueNewTools.length > 0) {
-                setTools(prev => [...uniqueNewTools, ...prev]);
-              }
-              alert(`${uniqueNewTools.length} tools imported locally.`);
+           if (uniqueNewTools.length > 0) {
+             setTools(prev => [...uniqueNewTools, ...prev]);
            }
+           alert(`${uniqueNewTools.length} tools imported locally.`);
         }
       } catch (err) {
         alert("Failed to parse JSON.");
@@ -1091,7 +919,6 @@ function App() {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        user={user}
       />
 
       <main className="ml-0 md:ml-64 flex-1 flex flex-col h-screen overflow-hidden">
@@ -1149,9 +976,7 @@ function App() {
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-1 md:mb-2 tracking-tight">{activeCategory === 'All' ? 'Library' : activeCategory}</h2>
               <div className="flex items-center gap-2">
                 <p className="text-secondary text-xs md:text-sm">{filteredTools.length} tools found</p>
-                {firebaseInitialized && !user && (
-                   <span className="text-[10px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded border border-yellow-500/30">Offline Mode</span>
-                )}
+                <span className="text-[10px] bg-surface text-secondary px-2 py-0.5 rounded border border-border">Local Mode</span>
               </div>
             </div>
           </div>
@@ -1216,7 +1041,6 @@ function App() {
         onClose={() => setIsSettingsOpen(false)}
         categories={categories}
         onUpdateCategories={handleUpdateCategories}
-        user={user}
       />
 
       <DeleteConfirmationModal

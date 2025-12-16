@@ -64,12 +64,3 @@ export interface AiEnrichmentResponse {
   websiteUrl?: string;
   whatItDoes?: string;
 }
-
-export interface FirebaseConfig {
-  apiKey: string;
-  authDomain: string;
-  projectId: string;
-  storageBucket: string;
-  messagingSenderId: string;
-  appId: string;
-}

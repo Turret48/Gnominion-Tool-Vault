@@ -6,7 +6,7 @@
 ## 2. Core Goals
 *   **Eliminate Manual Data Entry**: Remove the friction of saving a tool. Users simply input a name or URL, and the app does the rest.
 *   **Personal Knowledge Management (PKM)**: Provide a dedicated space for private, structured notes (e.g., "How I use this," "Gotchas") rather than just storing a link.
-*   **Privacy & Ownership**: All data lives locally in the user's browser. There is no login, no tracking, and no remote database. Users own their data via JSON export.
+*   **Privacy & Ownership**: Data ownership is paramount. Users can choose between local storage or their own private cloud via Firebase.
 *   **Aesthetics**: A high-contrast, "True Black & Neon Pink" UI that feels like a premium developer tool.
 
 ## 3. Key Features
@@ -17,7 +17,7 @@ When a user adds a tool (e.g., "Zapier" or "https://figma.com"):
 *   It attempts to find a logo and the official website URL.
 
 ### B. Organization
-*   **Categories**: Tools are strictly categorized (Automation, AI, Dev, Design, etc.).
+*   **Categories**: Dynamic categories (managed by the user).
 *   **Search**: Real-time filtering by name, tag, description, and notes.
 *   **Views**: Toggle between a visual Grid view (cards) and a compact List view.
 
@@ -26,7 +26,9 @@ When a user adds a tool (e.g., "Zapier" or "https://figma.com"):
 *   Structured fields for personal notes: "What it does," "When to use," "How to use," and "Links."
 
 ### D. Data Management
-*   **Persistence**: `localStorage` handles saving state.
+*   **Hybrid Storage**:
+    *   **Local Mode**: `localStorage` (default).
+    *   **Cloud Mode**: Syncs with user's personal Firebase Firestore instance.
 *   **Portability**: JSON Import/Export with smart duplicate detection.
 
 ## 4. User Experience
