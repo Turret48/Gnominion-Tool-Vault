@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
@@ -23,24 +23,23 @@ export async function POST(request: Request) {
 
     const categoriesList = availableCategories ? availableCategories.join(', ') : "General";
 
-    const prompt = `
-      You are an expert software directory curator. 
-      Analyze the following tool based on the user input: "${input}".
-      
-      If the input is a URL, assume the tool located at that URL. 
-      If it's a name, use your internal knowledge.
-      
-      Provide a structured analysis suitable for a personal knowledge base.
-      
-      IMPORTANT - Categorization Rules:
-      - You MUST strictly select one category from the following list: [${categoriesList}].
-      - Choose the one that fits best. If absolutely nothing fits, select 'Other'.
-    `;
+    const systemInstruction = `You are an expert software directory curator. 
+Analyze the software tool based on the user input: "${input}".
+
+If the input is a URL, assume the tool located at that URL. 
+If it's a name, use your internal knowledge.
+
+Provide a structured analysis suitable for a personal knowledge base.
+
+IMPORTANT - Categorization Rules:
+- You MUST strictly select one category from the following list: [${categoriesList}].
+- Choose the one that fits best. If absolutely nothing fits, select 'Other'.`;
 
     const response = await ai.models.generateContent({
         model: modelName,
-        contents: prompt,
+        contents: input,
         config: {
+            systemInstruction: systemInstruction,
             responseMimeType: "application/json",
             responseSchema: {
                 type: Type.OBJECT,
@@ -61,7 +60,13 @@ export async function POST(request: Request) {
                     websiteUrl: { type: Type.STRING }
                 },
                 required: ["name", "summary", "bestUseCases", "category", "tags", "pricingBucket"],
-            }
+            },
+            safetySettings: [
+                { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+                { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            ],
         }
     });
 
@@ -70,10 +75,10 @@ export async function POST(request: Request) {
     const data = JSON.parse(text);
     return NextResponse.json(data);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Gemini API Error:", error);
     return NextResponse.json(
-      { error: "Failed to enrich data via AI" },
+      { error: "Failed to enrich data via AI", details: error.message },
       { status: 500 }
     );
   }
