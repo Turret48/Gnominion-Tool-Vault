@@ -5,7 +5,7 @@ document.getElementById('explain-button').addEventListener('click', () => {
     if (toolName) {
         explanationContainer.innerHTML = '<p class="text-gray-400">Loading...</p>';
 
-        fetch('https://us-central1-gnomion-tool-vault.cloudfunctions.net/getExplanation', {
+        fetch('/getExplanation', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
