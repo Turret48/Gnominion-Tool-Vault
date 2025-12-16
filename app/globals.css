@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar for a polished feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #000000; 
+}
+::-webkit-scrollbar-thumb {
+  background: #27272A; 
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #EC4899; /* Pink hover */
+}
+body {
+  background-color: #000000;
+  color: #E4E4E7; /* Zinc 200 */
+}
+
+/* Markdown Styles */
+.markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3 { 
+  color: #fff; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem; 
+}
+.markdown-body h1 { font-size: 1.25rem; }
+.markdown-body h2 { font-size: 1.1rem; }
+.markdown-body ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 1rem; color: #d4d4d8; }
+.markdown-body ol { list-style-type: decimal; padding-left: 1.25rem; margin-bottom: 1rem; color: #d4d4d8; }
+.markdown-body li { margin-bottom: 0.25rem; }
+.markdown-body a { color: #EC4899; text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.2s; }
+.markdown-body a:hover { border-bottom-color: #EC4899; }
+.markdown-body blockquote { border-left: 3px solid #27272A; padding-left: 1rem; color: #A1A1AA; font-style: italic; margin-bottom: 1rem; }
+.markdown-body code { 
+  background-color: #27272A; color: #F472B6; 
+  padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.9em; 
+}
+.markdown-body pre { 
+  background-color: #18181B; padding: 1rem; border-radius: 0.5rem; 
+  overflow-x: auto; margin-bottom: 1rem; border: 1px solid #27272A; 
+}
+.markdown-body pre code { background-color: transparent; color: #E4E4E7; padding: 0; }

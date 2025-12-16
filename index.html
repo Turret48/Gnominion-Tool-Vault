@@ -1,110 +1,15 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tool Vault</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            colors: {
-              background: '#000000', // True Black
-              surface: '#121212', // Darker Surface
-              surfaceHover: '#1E1E1E',
-              border: '#27272A', // Zinc 800
-              primary: '#EC4899', // Pink 500 (Neon Pink)
-              primaryHover: '#DB2777', // Pink 600
-              secondary: '#A1A1AA', // Zinc 400
-              accent: '#F472B6', // Pink 400
-            },
-            fontFamily: {
-              sans: ['Inter', 'system-ui', 'sans-serif'],
-            },
-            boxShadow: {
-              'glow': '0 0 25px -5px rgba(236, 72, 153, 0.3)', // Pink glow
-            },
-            animation: {
-              'fade-in-up': 'fadeInUp 0.3s ease-out forwards',
-              'slide-in-right': 'slideInRight 0.3s ease-out forwards',
-            },
-            keyframes: {
-              fadeInUp: {
-                '0%': { opacity: '0', transform: 'translateY(10px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              },
-              slideInRight: {
-                '0%': { transform: 'translateX(100%)' },
-                '100%': { transform: 'translateX(0)' },
-              }
-            }
-          },
-        },
-      }
-    </script>
-    <style>
-      /* Custom scrollbar for a polished feel */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #000000; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #27272A; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #EC4899; /* Pink hover */
-      }
-      body {
-        background-color: #000000;
-        color: #E4E4E7; /* Zinc 200 */
-      }
-
-      /* Markdown Styles */
-      .markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
-      .markdown-body h1, .markdown-body h2, .markdown-body h3 { 
-        color: #fff; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem; 
-      }
-      .markdown-body h1 { font-size: 1.25rem; }
-      .markdown-body h2 { font-size: 1.1rem; }
-      .markdown-body ul { list-style-type: disc; padding-left: 1.25rem; margin-bottom: 1rem; color: #d4d4d8; }
-      .markdown-body ol { list-style-type: decimal; padding-left: 1.25rem; margin-bottom: 1rem; color: #d4d4d8; }
-      .markdown-body li { margin-bottom: 0.25rem; }
-      .markdown-body a { color: #EC4899; text-decoration: none; border-bottom: 1px solid transparent; transition: border-color 0.2s; }
-      .markdown-body a:hover { border-bottom-color: #EC4899; }
-      .markdown-body blockquote { border-left: 3px solid #27272A; padding-left: 1rem; color: #A1A1AA; font-style: italic; margin-bottom: 1rem; }
-      .markdown-body code { 
-        background-color: #27272A; color: #F472B6; 
-        padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.9em; 
-      }
-      .markdown-body pre { 
-        background-color: #18181B; padding: 1rem; border-radius: 0.5rem; 
-        overflow-x: auto; margin-bottom: 1rem; border: 1px solid #27272A; 
-      }
-      .markdown-body pre code { background-color: transparent; color: #E4E4E7; padding: 0; }
-    </style>
 <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.3/",
+    "tailwindcss": "https://esm.sh/tailwindcss@^4.1.18",
+    "next": "https://esm.sh/next@^16.0.10",
     "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "@google/genai": "https://esm.sh/@google/genai@^1.33.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
     "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
     "react-markdown": "https://esm.sh/react-markdown@^10.1.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "vite": "https://esm.sh/vite@^7.3.0"
+    "@google/genai": "https://esm.sh/@google/genai@^1.33.0",
+    "next/": "https://esm.sh/next@^16.0.10/"
   }
 }
 </script>
-</head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
-</html>
+<!-- This file is no longer needed for Next.js deployment. The entry point is now app/layout.tsx -->

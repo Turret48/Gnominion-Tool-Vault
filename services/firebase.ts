@@ -1,1 +1,1 @@
-// This file is unused and can be deleted. Firebase integration has been removed.
+// Firebase integration has been removed in favor of local storage for this version
