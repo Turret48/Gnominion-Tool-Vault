@@ -1,33 +1,39 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const cors = require("cors")({origin: true});
+const { defineString } = require("firebase-functions/params");
 
 // Initialize Firebase Admin SDK
 admin.initializeApp();
 
-// It is recommended to set your API key as an environment variable in the Firebase console
-const genAI = new GoogleGenerativeAI(functions.config().gemini.key);
+const geminiApiKey = defineString("GEMINI_API_KEY");
 
-exports.enrichToolWithGemini = functions.https.onCall(async (data, context) => {
-  // You can optionally add authentication checks here
-  // if (!context.auth) {
-  //   throw new functions.https.HttpsError('unauthenticated', 'This function must be called while authenticated.');
-  // }
-  
-  const { prompt } = data;
+// Initialize the Gemini AI model with the API key
+const genAI = new GoogleGenerativeAI(geminiApiKey.value());
 
-  if (!prompt) {
-    throw new functions.https.HttpsError('invalid-argument', 'The function must be called with a "prompt" argument.');
-  }
+exports.getExplanation = functions.https.onRequest(async (req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== 'POST') {
+      return res.status(405).send('Method Not Allowed');
+    }
 
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    return { data: text };
-  } catch (error) {
-    console.error("Error calling Gemini API:", error);
-    throw new functions.https.HttpsError('internal', 'Failed to call the Gemini API.');
-  }
+    const { tool } = req.body;
+
+    if (!tool) {
+      return res.status(400).send('The function must be called with a "tool" argument.');
+    }
+
+    try {
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      const prompt = `Explain the command-line tool "${tool}" in a helpful and concise way for a developer. Focus on its main purpose and provide a common use case example.`
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      res.status(200).send({ explanation: text });
+    } catch (error) {
+      console.error("Error calling Gemini API:", error);
+      res.status(500).send('Failed to call the Gemini API.');
+    }
+  });
 });
