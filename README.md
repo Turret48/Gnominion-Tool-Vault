@@ -1,15 +1,20 @@
-# Gnomion Tool Vault
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-This project is a simple web application that provides technical explanations of various tools. It uses a Google Cloud Function to generate the explanations using the Gemini API.
+# Run and deploy your AI Studio app
 
-## Deployment
+This contains everything you need to run your app locally.
 
-The website is deployed to Firebase Hosting and the backend is a Google Cloud Function.
+View your app in AI Studio: https://ai.studio/apps/drive/13OYMXPWK3hsIj6yyD4R5mKSg65DwF-a5
 
-### Frontend
+## Run Locally
 
-The frontend is a static website consisting of `index.html`, `style.css`, and `script.js`.
+**Prerequisites:**  Node.js
 
-### Backend
 
-The backend is a Google Cloud Function written in Node.js. It is located in the `functions` directory.
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
