@@ -4,10 +4,10 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, Plus, X, LayoutGrid, List as ListIcon, Database, ArrowUpRight, Hash, Tag, 
   Check, Save, Trash2, Download, Upload, Cpu, Zap, PenTool, Mail, BarChart2, AlertTriangle, Menu,
-  Settings, LogIn, LogOut, User as UserIcon, RefreshCw
+  Settings, LogIn, LogOut, User as UserIcon, RefreshCw, Activity
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { Tool, PricingBucket, DEFAULT_CATEGORIES } from '../types';
+import { Tool, PricingBucket, ToolStatus, DEFAULT_CATEGORIES } from '../types';
 import { 
   loadTools, 
   saveTools, 
@@ -24,7 +24,21 @@ import { enrichToolData } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
 import { signInWithGoogle, logOut } from '../services/auth';
 
-// 0. Shared UI Components
+// 0. Shared UI Components & Helpers
+const getStatusStyles = (status?: ToolStatus) => {
+  switch (status) {
+    case ToolStatus.USING:
+      return 'bg-primary/20 text-primary border-primary/20 shadow-[0_0_10px_-3px_rgba(236,72,153,0.3)]';
+    case ToolStatus.TESTING:
+      return 'bg-purple-500/20 text-purple-300 border-purple-500/20';
+    case ToolStatus.NOT_USING:
+      return 'bg-zinc-800 text-zinc-500 border-zinc-700';
+    case ToolStatus.INTERESTED:
+    default:
+      return 'bg-blue-500/20 text-blue-300 border-blue-500/20';
+  }
+};
+
 const ToolIcon = ({ url, websiteUrl, name, className = "" }: { url?: string, websiteUrl?: string, name: string, className?: string }) => {
   const [imgSrc, setImgSrc] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
@@ -473,6 +487,7 @@ const AddToolModal = ({
         integrations: enriched.integrations,
         pricingBucket: enriched.pricingBucket,
         pricingNotes: enriched.pricingNotes,
+        status: ToolStatus.INTERESTED, // Default status for new tools
         notes: {
           whatItDoes: enriched.whatItDoes || '',
           whenToUse: '',
@@ -492,6 +507,7 @@ const AddToolModal = ({
         name: input,
         category: categories[0],
         pricingBucket: PricingBucket.UNKNOWN,
+        status: ToolStatus.INTERESTED,
         tags: []
       });
     }
@@ -590,6 +606,26 @@ const AddToolModal = ({
                       onChange={e => setDraftTool({...draftTool, url: e.target.value})}
                     />
                  </div>
+                 <div className="space-y-4">
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider">Status</label>
+                    <select 
+                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                      value={draftTool.status || ToolStatus.INTERESTED}
+                      onChange={e => setDraftTool({...draftTool, status: e.target.value as ToolStatus})}
+                    >
+                      {Object.values(ToolStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                 </div>
+                 <div className="space-y-4">
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider">Pricing</label>
+                    <select 
+                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                      value={draftTool.pricingBucket || PricingBucket.UNKNOWN}
+                      onChange={e => setDraftTool({...draftTool, pricingBucket: e.target.value as PricingBucket})}
+                    >
+                      {Object.values(PricingBucket).map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                 </div>
                  <div className="col-span-1 md:col-span-2 space-y-4">
                     <label className="block text-xs font-bold text-secondary uppercase tracking-wider">Summary</label>
                     <input 
@@ -610,16 +646,6 @@ const AddToolModal = ({
                     <datalist id="category-options">
                       {categories.map(c => <option key={c} value={c} />)}
                     </datalist>
-                 </div>
-                 <div className="space-y-4">
-                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider">Pricing</label>
-                    <select 
-                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
-                      value={draftTool.pricingBucket || PricingBucket.UNKNOWN}
-                      onChange={e => setDraftTool({...draftTool, pricingBucket: e.target.value as PricingBucket})}
-                    >
-                      {Object.values(PricingBucket).map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
                  </div>
               </div>
               <div className="bg-black/30 p-4 rounded-xl border border-border/50">
@@ -838,6 +864,21 @@ const ToolDetail = ({
                    ) : (
                       <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">{editedTool.category}</span>
                    )}
+                   
+                   {isEditing ? (
+                     <select 
+                       className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                       value={editedTool.status || ToolStatus.INTERESTED}
+                       onChange={(e) => setEditedTool({...editedTool, status: e.target.value as ToolStatus})}
+                     >
+                       {Object.values(ToolStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                     </select>
+                   ) : (
+                     <span className={`px-2.5 py-0.5 rounded-full border text-xs font-bold ${getStatusStyles(editedTool.status)}`}>
+                       {editedTool.status || ToolStatus.INTERESTED}
+                     </span>
+                   )}
+
                    <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
                    {isEditing ? (
                       <input 
@@ -1284,7 +1325,14 @@ export default function Page() {
                     <div className="flex-1 min-w-0 w-full">
                       <div className="flex items-center justify-between mb-1 md:mb-2">
                         <h3 className="font-bold text-base md:text-lg text-white group-hover:text-primary transition-colors truncate tracking-tight">{tool.name}</h3>
-                        {viewMode === 'list' && <span className="text-[10px] md:text-xs font-medium text-secondary px-2 py-0.5 md:px-2.5 md:py-1 rounded-full bg-black border border-border">{tool.category}</span>}
+                        <div className="flex items-center gap-2">
+                          {viewMode === 'list' && (
+                            <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold ${getStatusStyles(tool.status)}`}>
+                              {tool.status || ToolStatus.INTERESTED}
+                            </span>
+                          )}
+                          {viewMode === 'list' && <span className="text-[10px] md:text-xs font-medium text-secondary px-2 py-0.5 md:px-2.5 md:py-1 rounded-full bg-black border border-border">{tool.category}</span>}
+                        </div>
                       </div>
                       <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed">{tool.summary}</p>
                     </div>
@@ -1292,7 +1340,11 @@ export default function Page() {
                     {viewMode === 'grid' && (
                       <div className="mt-4 md:mt-6 pt-3 md:pt-4 border-t border-border/50 w-full flex items-center justify-between text-[10px] md:text-xs font-medium text-gray-500">
                         <span className="bg-black px-2 py-1 md:px-2.5 rounded-md border border-border group-hover:border-primary/20 transition-colors">{tool.category}</span>
-                        <span>{tool.pricingBucket}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold ${getStatusStyles(tool.status)}`}>
+                            {tool.status || ToolStatus.INTERESTED}
+                          </span>
+                        </div>
                       </div>
                     )}
                   </div>

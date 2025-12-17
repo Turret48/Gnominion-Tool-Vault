@@ -1,49 +1,54 @@
 # Tool Vault - Technical Steering & Architecture
 
 ## 1. Technology Stack
-*   **Framework**: React 19 (Client-Side SPA) + TypeScript.
-*   **Styling**: Tailwind CSS.
+*   **Framework**: Next.js 16 (App Router) + React 19.
+*   **Language**: TypeScript.
+*   **Styling**: Tailwind CSS 4.x.
 *   **Icons**: Lucide React.
 *   **AI SDK**: `@google/genai` (Google Gemini API).
-*   **Build/Runtime**: standard HTML/ES Modules (no complex bundler required for this setup, uses `esm.sh` for imports in `index.html`).
+*   **Backend/Auth**: Firebase v12 (Auth + Firestore).
+*   **Build/Runtime**: ES Modules via `esm.sh` (in `index.html`) or Standard Next.js build.
 
 ## 2. Architecture Patterns
-*   **Client-Side Only**: The app is serverless. All logic executes in the browser.
+*   **Hybrid Rendering**: 
+    *   `app/page.tsx`: Client-Side (`'use client'`) SPA handling UI state, filtering, and storage logic.
+    *   `app/api/enrich/route.ts`: Server-Side API Route acting as a secure proxy for Gemini API calls to protect keys in production.
 *   **Services Layer**:
-    *   `services/geminiService.ts`: Handles all AI interactions.
-    *   `services/storageService.ts`: Wraps `localStorage` and file I/O.
-*   **State Management**: React `useState` / `useEffect` lifted to `App.tsx` (acting as the controller).
+    *   `services/geminiService.ts`: Handles AI interactions, falling back to Server API if client key is missing.
+    *   `services/storageService.ts`: Abstraction layer handling both `localStorage` and Firestore interactions seamlessly.
+*   **Sync Logic**: 
+    *   Upon authentication (`AuthContext`), the app checks for local tools.
+    *   Users can explicitly trigger a "Sync Local to Cloud" action which pushes local data to Firestore and clears local storage.
 
 ## 3. AI Implementation Details (Gemini)
 *   **Model**: `gemini-2.5-flash`.
 *   **Method**: `ai.models.generateContent`.
 *   **JSON Enforcement**:
-    *   We do **not** scrape websites. We rely on the model's internal knowledge base.
     *   We use `responseSchema` and `responseMimeType: "application/json"` to force strict, type-safe JSON output.
 *   **Prompting Strategy**:
     *   The system instruction forces the AI to act as a "Software Directory Curator."
-    *   Strict Enum enforcement for `Category` and `PricingBucket` to ensure filters work.
+    *   Strict Enum enforcement for `Category` and `PricingBucket`.
 
-## 4. Image Handling Strategy
-Since AI cannot reliably generate valid image URLs 100% of the time, we use a 3-layer fallback in the `ToolIcon` component:
-1.  **AI Guess**: Try the URL returned by Gemini.
-2.  **Favicon API**: If (1) fails, extract hostname and use `https://www.google.com/s2/favicons`.
-3.  **Fallback**: If (1) and (2) fail, render a text-based placeholder.
+## 4. Mobile & Responsive Strategy
+*   **Breakpoints**:
+    *   `lg` (1024px) is the boundary between Desktop (Sidebar) and Mobile (Drawer). `md` was too cramped for the sidebar.
+*   **Native-Like Behaviors (Critical)**:
+    *   **Disable Zoom**: `user-scalable=no` in meta tag AND `gesturestart` event listeners in JS to defeat iOS Safari override.
+    *   **Disable Overscroll**: `overscroll-behavior-y: none` to prevent "bounce" effects.
+    *   **Touch Action**: `touch-action: manipulation` globally to prevent double-tap zooms.
+    *   **Input Zoom**: All inputs must use `text-base` (16px) on mobile viewports to prevent browser auto-zoom on focus.
+    *   **Touch Targets**: Minimum padding of `py-3` / `p-3` for interactive elements on touch devices.
 
-## 5. Design System & CSS
-*   **Theme**: Dark Mode only (`class="dark"` on html).
+## 5. Design System
+*   **Theme**: Dark Mode only (`class="dark"`).
 *   **Palette**:
-    *   Background: `#000000` (True Black)
-    *   Surface: `#121212`
-    *   Border: `#27272A` (Zinc 800)
-    *   Primary: `#EC4899` (Pink 500)
-*   **Responsiveness**:
-    *   Use `md:` prefix for desktop styles.
-    *   Mobile layout uses a Drawer (Hamburger menu) instead of Sidebar.
-    *   Inputs must be `16px` text size on mobile to prevent iOS zoom.
+    *   Background: `#000000` (True Black).
+    *   Surface: `#121212` / SurfaceHover: `#1E1E1E`.
+    *   Border: `#27272A` (Zinc 800).
+    *   Primary: `#EC4899` (Neon Pink).
+*   **Typography**: Inter (System UI).
 
 ## 6. Coding Standards
-*   **Types**: All data structures must be defined in `types.ts`.
-*   **Components**: Keep components within `App.tsx` unless they grow too large.
-*   **Icons**: Use `lucide-react`. consistently.
-*   **Error Handling**: AI calls must be wrapped in `try/catch`. If AI fails, return a "skeleton" object so the user can still manually edit the tool.
+*   **Components**: Single-file component structure in `page.tsx` is acceptable for this scale, but abstract if complexity grows.
+*   **State**: Lifted state in `Page` component.
+*   **Security**: Never expose API keys in client-side code unless explicitly intended for local dev (use `process.env` checks).

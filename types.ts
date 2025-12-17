@@ -7,6 +7,13 @@ export enum PricingBucket {
   UNKNOWN = 'Unknown'
 }
 
+export enum ToolStatus {
+  INTERESTED = 'Interested',
+  TESTING = 'Testing',
+  USING = 'Using',
+  NOT_USING = 'Not Using'
+}
+
 // Default categories for new users, but now just a string array helper
 export const DEFAULT_CATEGORIES = [
   'Automation',
@@ -37,6 +44,7 @@ export interface Tool {
   integrations: string[];
   pricingBucket: PricingBucket;
   pricingNotes: string;
+  status: ToolStatus; // New field for tracking usage
   
   // Structured Notes
   notes: {
