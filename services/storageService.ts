@@ -33,6 +33,14 @@ export const loadTools = (): Tool[] => {
   }
 };
 
+export const clearLocalTools = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (e) {
+    console.error("Failed to clear localStorage", e);
+  }
+};
+
 export const exportData = (tools: Tool[]) => {
   const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tools, null, 2));
   const downloadAnchorNode = document.createElement('a');

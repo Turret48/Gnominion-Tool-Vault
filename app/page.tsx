@@ -4,13 +4,14 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, Plus, X, LayoutGrid, List as ListIcon, Database, ArrowUpRight, Hash, Tag, 
   Check, Save, Trash2, Download, Upload, Cpu, Zap, PenTool, Mail, BarChart2, AlertTriangle, Menu,
-  Settings, LogIn, LogOut, User as UserIcon
+  Settings, LogIn, LogOut, User as UserIcon, RefreshCw
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Tool, PricingBucket, DEFAULT_CATEGORIES } from '../types';
 import { 
   loadTools, 
   saveTools, 
+  clearLocalTools,
   exportData, 
   subscribeToTools, 
   subscribeToCategories,
@@ -85,7 +86,9 @@ const Sidebar = ({
   isOpen,
   onClose,
   onOpenSettings,
-  onOpenLogin
+  onOpenLogin,
+  localToolCount,
+  onSyncLocal
 }: { 
   categories: string[], 
   activeCategory: string, 
@@ -95,7 +98,9 @@ const Sidebar = ({
   isOpen: boolean,
   onClose: () => void,
   onOpenSettings: () => void,
-  onOpenLogin: () => void
+  onOpenLogin: () => void,
+  localToolCount: number,
+  onSyncLocal: () => void
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
@@ -172,26 +177,38 @@ const Sidebar = ({
         {/* User Profile / Auth Section */}
         <div className="p-4 border-t border-border bg-black/50">
            {user ? (
-             <div className="flex items-center gap-3 p-2 rounded-lg bg-surface border border-border/50 mb-3">
-               {user.photoURL ? (
-                 <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-border" />
-               ) : (
-                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                   <UserIcon size={14} />
+             <>
+                {localToolCount > 0 && (
+                   <button
+                     onClick={onSyncLocal}
+                     className="w-full flex items-center justify-center gap-2 mb-3 px-3 py-2.5 rounded-lg bg-indigo-900/30 border border-indigo-500/30 text-xs font-bold text-indigo-300 hover:bg-indigo-900/50 transition-all group"
+                     title="Upload local tools to account"
+                   >
+                     <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-500" /> 
+                     Sync {localToolCount} Local Tools
+                   </button>
+                )}
+               <div className="flex items-center gap-3 p-2 rounded-lg bg-surface border border-border/50 mb-3">
+                 {user.photoURL ? (
+                   <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-border" />
+                 ) : (
+                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                     <UserIcon size={14} />
+                   </div>
+                 )}
+                 <div className="flex-1 min-w-0">
+                   <p className="text-xs font-bold text-white truncate">{user.displayName || 'User'}</p>
+                   <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
                  </div>
-               )}
-               <div className="flex-1 min-w-0">
-                 <p className="text-xs font-bold text-white truncate">{user.displayName || 'User'}</p>
-                 <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
+                 <button 
+                   onClick={logOut} 
+                   className="text-gray-500 hover:text-red-400 transition-colors p-1"
+                   title="Sign Out"
+                 >
+                   <LogOut size={14} />
+                 </button>
                </div>
-               <button 
-                 onClick={logOut} 
-                 className="text-gray-500 hover:text-red-400 transition-colors p-1"
-                 title="Sign Out"
-               >
-                 <LogOut size={14} />
-               </button>
-             </div>
+             </>
            ) : (
              <button
                onClick={onOpenLogin}
@@ -965,7 +982,8 @@ export default function Page() {
   
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [toolToDelete, setToolToDelete] = useState<Tool | null>(null);
-  
+  const [localToolsCount, setLocalToolsCount] = useState(0);
+
   const { user, loading } = useAuth();
 
   // 1. Initialize & Sync Data (Firestore vs Local)
@@ -975,6 +993,10 @@ export default function Page() {
 
     if (user) {
       // --- Cloud Mode ---
+      // Check if there are local tools to sync
+      const local = loadTools();
+      setLocalToolsCount(local.length);
+
       // Subscribe to Firestore changes
       unsubscribeTools = subscribeToTools(user.uid, (cloudTools) => {
         setTools(cloudTools);
@@ -992,6 +1014,7 @@ export default function Page() {
       // --- Local Mode ---
       const localTools = loadTools();
       setTools(localTools);
+      setLocalToolsCount(localTools.length);
       
       const storedCats = localStorage.getItem('tool_vault_categories');
       if (storedCats) {
@@ -1013,6 +1036,7 @@ export default function Page() {
   useEffect(() => {
     if (!user) {
       saveTools(tools);
+      setLocalToolsCount(tools.length);
     }
   }, [tools, user]);
 
@@ -1072,6 +1096,29 @@ export default function Page() {
       syncCategoriesToFirestore(user.uid, newCats);
     } else {
       setCategories(newCats);
+    }
+  };
+
+  const handleSyncLocalToCloud = async () => {
+    if (!user) return;
+    const local = loadTools();
+    if (local.length === 0) return;
+
+    if (!confirm(`Upload ${local.length} local tools to your account? This will clear them from this device.`)) {
+      return;
+    }
+
+    try {
+      // Upload one by one to avoid large transaction limits if many tools
+      await Promise.all(local.map(t => addToolToFirestore(user.uid, t)));
+      
+      // Clear local storage
+      clearLocalTools();
+      setLocalToolsCount(0);
+      alert("Local tools synced to cloud successfully!");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to sync some tools. Check console.");
     }
   };
 
@@ -1140,6 +1187,8 @@ export default function Page() {
         onClose={() => setIsMobileMenuOpen(false)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenLogin={() => setIsLoginModalOpen(true)}
+        localToolCount={localToolsCount}
+        onSyncLocal={handleSyncLocalToCloud}
       />
 
       <main className="ml-0 md:ml-64 flex-1 flex flex-col h-screen overflow-hidden">
