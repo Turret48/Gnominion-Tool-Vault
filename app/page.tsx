@@ -391,7 +391,7 @@ const SettingsModal = ({
             <div className="space-y-4">
                <div className="flex gap-2">
                  <input 
-                   className="flex-1 bg-black border border-border rounded-lg px-4 py-2 text-white text-sm focus:border-primary focus:outline-none"
+                   className="flex-1 bg-black border border-border rounded-lg px-4 py-2 text-white text-base md:text-sm focus:border-primary focus:outline-none"
                    placeholder="New category name..."
                    value={newCat}
                    onChange={e => setNewCat(e.target.value)}
@@ -546,7 +546,7 @@ const AddToolModal = ({
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="e.g. https://www.jasper.ai or 'Zapier'"
-                  className="w-full bg-black border border-border rounded-full px-6 py-4 pr-14 text-white placeholder-gray-600 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all"
+                  className="w-full bg-black border border-border rounded-full px-6 py-4 pr-14 text-white placeholder-gray-600 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all text-base"
                 />
                 <button 
                   type="submit"
@@ -577,7 +577,7 @@ const AddToolModal = ({
                  <div className="space-y-4">
                     <label className="block text-xs font-bold text-secondary uppercase tracking-wider">Name</label>
                     <input 
-                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors"
+                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                       value={draftTool.name || ''}
                       onChange={e => setDraftTool({...draftTool, name: e.target.value})}
                     />
@@ -585,7 +585,7 @@ const AddToolModal = ({
                  <div className="space-y-4">
                     <label className="block text-xs font-bold text-secondary uppercase tracking-wider">URL</label>
                     <input 
-                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors"
+                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                       value={draftTool.url || ''}
                       onChange={e => setDraftTool({...draftTool, url: e.target.value})}
                     />
@@ -593,7 +593,7 @@ const AddToolModal = ({
                  <div className="col-span-1 md:col-span-2 space-y-4">
                     <label className="block text-xs font-bold text-secondary uppercase tracking-wider">Summary</label>
                     <input 
-                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors"
+                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                       value={draftTool.summary || ''}
                       onChange={e => setDraftTool({...draftTool, summary: e.target.value})}
                     />
@@ -602,7 +602,7 @@ const AddToolModal = ({
                     <label className="block text-xs font-bold text-secondary uppercase tracking-wider">Category</label>
                     <input 
                       list="category-options"
-                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors"
+                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                       value={draftTool.category || ''}
                       onChange={e => setDraftTool({...draftTool, category: e.target.value})}
                       placeholder="Select or type..."
@@ -614,7 +614,7 @@ const AddToolModal = ({
                  <div className="space-y-4">
                     <label className="block text-xs font-bold text-secondary uppercase tracking-wider">Pricing</label>
                     <select 
-                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors"
+                      className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                       value={draftTool.pricingBucket || PricingBucket.UNKNOWN}
                       onChange={e => setDraftTool({...draftTool, pricingBucket: e.target.value as PricingBucket})}
                     >
@@ -633,7 +633,7 @@ const AddToolModal = ({
                   ))}
                 </div>
                 <input 
-                  className="bg-transparent border-b border-border text-sm text-white focus:border-primary focus:outline-none w-full py-2"
+                  className="bg-transparent border-b border-border text-base md:text-sm text-white focus:border-primary focus:outline-none w-full py-2"
                   placeholder="Type tag and press Enter..."
                   value={newTag}
                   onChange={e => setNewTag(e.target.value)}
@@ -674,7 +674,7 @@ const ToolDetail = ({
 }: { 
   tool: Tool, 
   onClose: () => void, 
-  onUpdate: (t: Tool) => void,
+  onUpdate: (t: Tool) => void, 
   onRequestDelete: (id: string) => void,
   categories: string[]
 }) => {
@@ -726,7 +726,7 @@ const ToolDetail = ({
       {isEditing ? (
         <>
           <textarea
-            className="w-full min-h-[120px] bg-black border border-border rounded-xl p-4 text-gray-300 leading-relaxed focus:border-primary focus:outline-none transition-colors resize-none font-mono text-sm"
+            className="w-full min-h-[120px] bg-black border border-border rounded-xl p-4 text-gray-300 leading-relaxed focus:border-primary focus:outline-none transition-colors resize-none font-mono text-base md:text-sm"
             value={value}
             onChange={(e) => setEditedTool({
               ...editedTool,
@@ -826,7 +826,7 @@ const ToolDetail = ({
                       <>
                         <input 
                           list="category-options-detail"
-                          className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none"
+                          className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
                           value={editedTool.category}
                           onChange={(e) => setEditedTool({...editedTool, category: e.target.value})}
                           placeholder="Category"
@@ -841,7 +841,7 @@ const ToolDetail = ({
                    <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
                    {isEditing ? (
                       <input 
-                        className="bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none w-full mt-2 md:mt-0"
+                        className="bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none w-full mt-2 md:mt-0 text-base md:text-sm"
                         value={editedTool.url}
                         onChange={(e) => setEditedTool({...editedTool, url: e.target.value})}
                       />
@@ -897,7 +897,7 @@ const ToolDetail = ({
           <div className="mt-12 pt-8 border-t border-border flex flex-col gap-4">
              {isEditing && (
                 <input 
-                  className="bg-transparent border-b border-border text-sm text-white focus:border-primary focus:outline-none w-full py-2"
+                  className="bg-transparent border-b border-border text-base md:text-sm text-white focus:border-primary focus:outline-none w-full py-2"
                   placeholder="Type new tag and press Enter..."
                   value={newTag}
                   onChange={e => setNewTag(e.target.value)}
@@ -1209,7 +1209,7 @@ export default function Page() {
               placeholder="Search..." 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-surface border border-border rounded-full py-2 md:py-2.5 pl-11 pr-5 text-sm text-gray-200 focus:outline-none focus:border-primary/50 transition-all shadow-sm"
+              className="w-full bg-surface border border-border rounded-full py-2 md:py-2.5 pl-11 pr-5 text-gray-200 focus:outline-none focus:border-primary/50 transition-all shadow-sm text-base md:text-sm"
             />
           </div>
 
