@@ -2,9 +2,8 @@ import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/gen
 import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
-  const apiKey = process.env.API_KEY;
-
-  if (!apiKey) {
+  // Ensure API Key exists
+  if (!process.env.API_KEY) {
     return NextResponse.json(
       { error: "API_KEY is missing from server environment." },
       { status: 500 }
@@ -18,7 +17,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Input is required" }, { status: 400 });
     }
 
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const modelName = 'gemini-2.5-flash';
 
     const categoriesList = availableCategories ? availableCategories.join(', ') : "General";

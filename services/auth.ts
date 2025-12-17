@@ -7,6 +7,10 @@ import {
 import { auth } from "./firebase";
 
 const googleProvider = new GoogleAuthProvider();
+// Force account selection to prevent "popup closed immediately" errors
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
 
 export const signInWithGoogle = async (): Promise<User> => {
   if (!auth) {

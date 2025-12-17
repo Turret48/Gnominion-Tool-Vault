@@ -238,7 +238,24 @@ const LoginModal = ({
       await signInWithGoogle();
       onClose();
     } catch (err: any) {
-      setError('Failed to sign in. Please try again.');
+      console.error("Login Error:", err);
+      
+      let msg = 'Failed to sign in.';
+      // Handle common Firebase Auth errors
+      if (err.code === 'auth/popup-closed-by-user') {
+        msg = 'Sign-in window was closed.';
+      } else if (err.code === 'auth/cancelled-popup-request') {
+        msg = 'Multiple popup requests cancelled.';
+      } else if (err.code === 'auth/operation-not-allowed') {
+        msg = 'Google Sign-In disabled in Firebase Console.';
+      } else if (err.code === 'auth/unauthorized-domain') {
+        msg = 'Domain not authorized in Firebase Console (Auth > Settings).';
+      } else if (err.message) {
+        // Fallback to the raw message if available
+        msg = err.message;
+      }
+      
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -313,8 +330,6 @@ const LoginModal = ({
 // ... [SettingsModal, AddToolModal, ToolDetail, DeleteConfirmationModal Components remain unchanged] ...
 // Re-implementing simplified versions for context in this file response, 
 // assuming the original code structure wraps them or they are imported.
-// Since the user provided the FULL file content previously, I must output the FULL file content again 
-// to ensure no code is lost.
 
 const SettingsModal = ({
   isOpen,

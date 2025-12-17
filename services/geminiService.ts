@@ -68,7 +68,7 @@ const createFallback = (input: string, availableCategories: string[], errorMessa
 
 // Client-Side Logic Implementation
 async function enrichWithClientSDK(input: string, availableCategories: string[]): Promise<AiEnrichmentResponse> {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const modelName = 'gemini-2.5-flash';
 
     const categoriesList = availableCategories.join(', ');
