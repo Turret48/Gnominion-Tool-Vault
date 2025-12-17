@@ -1,4 +1,4 @@
-import { GoogleGenAI, Type, Schema, HarmCategory, HarmBlockThreshold } from "@google/genai";
+import { GoogleGenAI, Type, HarmCategory, HarmBlockThreshold } from "@google/genai";
 import { AiEnrichmentResponse, PricingBucket } from "../types";
 
 const TIMEOUT_MS = 15000; // 15 seconds max for AI
@@ -9,7 +9,7 @@ export const enrichToolData = async (input: string, availableCategories: string[
   if (process.env.API_KEY) {
     try {
       console.log("Attempting client-side enrichment...");
-      return await enrichWithClientSDK(input, availableCategories, process.env.API_KEY);
+      return await enrichWithClientSDK(input, availableCategories);
     } catch (error) {
       console.warn("Client-side enrichment failed:", error);
       // Fall through to server attempt if client fails (though likely server will fail too if key was bad)
@@ -67,8 +67,8 @@ const createFallback = (input: string, availableCategories: string[], errorMessa
 });
 
 // Client-Side Logic Implementation
-async function enrichWithClientSDK(input: string, availableCategories: string[], apiKey: string): Promise<AiEnrichmentResponse> {
-    const ai = new GoogleGenAI({ apiKey });
+async function enrichWithClientSDK(input: string, availableCategories: string[]): Promise<AiEnrichmentResponse> {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
     const modelName = 'gemini-2.5-flash';
 
     const categoriesList = availableCategories.join(', ');
@@ -103,7 +103,7 @@ IMPORTANT - Categorization Rules:
             websiteUrl: { type: Type.STRING }
         },
         required: ["name", "summary", "bestUseCases", "category", "tags", "pricingBucket"],
-    } as Schema;
+    };
 
     const response = await ai.models.generateContent({
         model: modelName,
