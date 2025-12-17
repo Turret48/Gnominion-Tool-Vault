@@ -119,7 +119,7 @@ const Sidebar = ({
     <>
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-30 md:hidden animate-fade-in-up" 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-30 lg:hidden animate-fade-in-up" 
           onClick={onClose}
         />
       )}
@@ -128,19 +128,19 @@ const Sidebar = ({
         fixed top-0 bottom-0 left-0 z-40 w-64 bg-black border-r border-border flex flex-col 
         transition-transform duration-300 ease-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
-        md:translate-x-0
+        lg:translate-x-0
       `}>
         <div className="p-6 relative flex-1 overflow-hidden flex flex-col">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center shadow-lg shadow-pink-500/20">
               <Database size={16} className="text-white" />
             </div>
-            <h1 className="font-bold text-xl tracking-tight text-white">Tool Vault</h1>
+            <h1 className="font-bold text-xl tracking-tight text-white select-none">Tool Vault</h1>
           </div>
           
           <button 
             onClick={onClose} 
-            className="absolute top-6 right-4 md:hidden text-secondary hover:text-white p-2"
+            className="absolute top-6 right-4 lg:hidden text-secondary hover:text-white p-2"
           >
             <X size={20} />
           </button>
@@ -148,16 +148,16 @@ const Sidebar = ({
           <nav className="space-y-1 overflow-y-auto max-h-full custom-scrollbar flex-1">
             <button 
               onClick={() => { onCategorySelect('All'); onClose(); }}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${activeCategory === 'All' ? 'bg-surface text-primary border border-border' : 'text-secondary hover:text-white hover:bg-surface/50'}`}
+              className={`w-full flex items-center gap-3 px-3 py-3 rounded-full text-sm font-medium transition-all duration-200 ${activeCategory === 'All' ? 'bg-surface text-primary border border-border' : 'text-secondary hover:text-white hover:bg-surface/50'}`}
             >
               <LayoutGrid size={18} />
               All Tools
             </button>
             
             <div className="pt-6 pb-3 px-3 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest">Categories</span>
-              <button onClick={onOpenSettings} className="text-secondary hover:text-primary transition-colors" title="Manage Categories">
-                <Settings size={12} />
+              <span className="text-[10px] font-bold text-gray-600 uppercase tracking-widest select-none">Categories</span>
+              <button onClick={onOpenSettings} className="text-secondary hover:text-primary transition-colors p-1" title="Manage Categories">
+                <Settings size={14} />
               </button>
             </div>
             
@@ -165,7 +165,7 @@ const Sidebar = ({
               <button 
                 key={cat}
                 onClick={() => { onCategorySelect(cat); onClose(); }}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-full text-sm font-medium transition-all duration-200 ${activeCategory === cat ? 'bg-surface text-primary border border-border' : 'text-secondary hover:text-white hover:bg-surface/50'}`}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-full text-sm font-medium transition-all duration-200 ${activeCategory === cat ? 'bg-surface text-primary border border-border' : 'text-secondary hover:text-white hover:bg-surface/50'}`}
               >
                 {getIcon(cat)}
                 <span className="truncate">{cat}</span>
@@ -181,7 +181,7 @@ const Sidebar = ({
                 {localToolCount > 0 && (
                    <button
                      onClick={onSyncLocal}
-                     className="w-full flex items-center justify-center gap-2 mb-3 px-3 py-2.5 rounded-lg bg-indigo-900/30 border border-indigo-500/30 text-xs font-bold text-indigo-300 hover:bg-indigo-900/50 transition-all group"
+                     className="w-full flex items-center justify-center gap-2 mb-3 px-3 py-3 rounded-lg bg-indigo-900/30 border border-indigo-500/30 text-xs font-bold text-indigo-300 hover:bg-indigo-900/50 transition-all group"
                      title="Upload local tools to account"
                    >
                      <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-500" /> 
@@ -202,17 +202,17 @@ const Sidebar = ({
                  </div>
                  <button 
                    onClick={logOut} 
-                   className="text-gray-500 hover:text-red-400 transition-colors p-1"
+                   className="text-gray-500 hover:text-red-400 transition-colors p-2"
                    title="Sign Out"
                  >
-                   <LogOut size={14} />
+                   <LogOut size={16} />
                  </button>
                </div>
              </>
            ) : (
              <button
                onClick={onOpenLogin}
-               className="w-full flex items-center justify-center gap-2 mb-3 px-3 py-2.5 rounded-lg bg-surfaceHover border border-primary/20 text-xs font-bold text-primary hover:bg-primary/10 transition-all"
+               className="w-full flex items-center justify-center gap-2 mb-3 px-3 py-3 rounded-lg bg-surfaceHover border border-primary/20 text-xs font-bold text-primary hover:bg-primary/10 transition-all"
              >
                <LogIn size={14} /> Sign In to Sync
              </button>
@@ -221,14 +221,14 @@ const Sidebar = ({
           <div className="flex gap-2">
              <button 
               onClick={onExport}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-surface border border-border text-xs font-medium text-secondary hover:text-white hover:border-gray-500 transition-all hover:bg-surfaceHover"
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-3 rounded-lg bg-surface border border-border text-xs font-medium text-secondary hover:text-white hover:border-gray-500 transition-all hover:bg-surfaceHover"
               title="Export Data"
             >
               <Download size={14} /> 
             </button>
              <button 
               onClick={() => fileInputRef.current?.click()}
-              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-surface border border-border text-xs font-medium text-secondary hover:text-white hover:border-gray-500 transition-all hover:bg-surfaceHover"
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-3 rounded-lg bg-surface border border-border text-xs font-medium text-secondary hover:text-white hover:border-gray-500 transition-all hover:bg-surfaceHover"
               title="Import JSON"
             >
               <Upload size={14} /> 
@@ -922,44 +922,42 @@ const ToolDetail = ({
   );
 };
 
-const DeleteConfirmationModal = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  toolName 
-}: { 
-  isOpen: boolean, 
-  onClose: () => void, 
-  onConfirm: () => void, 
-  toolName: string 
+const DeleteConfirmationModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  toolName
+}: {
+  isOpen: boolean,
+  onClose: () => void,
+  onConfirm: () => void,
+  toolName: string
 }) => {
   if (!isOpen) return null;
-  
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
-      <div className="bg-surface border border-border rounded-2xl p-8 max-w-sm w-full shadow-2xl animate-fade-in-up">
-        <div className="flex flex-col items-center text-center">
-          <div className="w-14 h-14 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center mb-5">
-            <AlertTriangle size={28} />
-          </div>
-          <h3 className="text-xl font-bold text-white mb-2">Delete Tool?</h3>
-          <p className="text-secondary text-sm mb-8 leading-relaxed">
-            Are you sure you want to delete <span className="text-white font-semibold block mt-1">{toolName}</span>? This action cannot be undone.
-          </p>
-          <div className="flex w-full gap-3">
-            <button 
-              onClick={onClose}
-              className="flex-1 px-4 py-3 rounded-full bg-transparent border border-border text-sm font-medium text-secondary hover:text-white hover:border-white/20 transition-all"
-            >
-              Cancel
-            </button>
-            <button 
-              onClick={onConfirm}
-              className="flex-1 px-4 py-3 rounded-full bg-red-600 text-white text-sm font-bold hover:bg-red-500 transition-colors shadow-lg shadow-red-600/20"
-            >
-              Delete
-            </button>
-          </div>
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[60] flex items-center justify-center p-4">
+      <div className="bg-surface border border-border rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6 text-center animate-fade-in-up">
+        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle size={32} className="text-red-500" />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">Delete Tool?</h3>
+        <p className="text-gray-400 text-sm mb-6 leading-relaxed">
+          Are you sure you want to delete <span className="text-white font-semibold">{toolName}</span>? This action cannot be undone.
+        </p>
+        <div className="flex gap-3">
+          <button 
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-full bg-surface border border-border text-white font-medium hover:bg-surfaceHover transition-all"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={onConfirm}
+            className="flex-1 py-2.5 rounded-full bg-red-500 text-white font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-500/20"
+          >
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -1191,12 +1189,12 @@ export default function Page() {
         onSyncLocal={handleSyncLocalToCloud}
       />
 
-      <main className="ml-0 md:ml-64 flex-1 flex flex-col h-screen overflow-hidden">
+      <main className="ml-0 lg:ml-64 flex-1 flex flex-col h-screen overflow-hidden">
         
         <header className="h-16 md:h-20 border-b border-border bg-black/80 backdrop-blur-md px-4 md:px-8 flex items-center justify-between sticky top-0 z-10 gap-3">
           
           <button 
-            className="md:hidden p-2 -ml-2 text-secondary hover:text-white"
+            className="lg:hidden p-3 -ml-2 mr-2 text-secondary hover:text-white"
             onClick={() => setIsMobileMenuOpen(true)}
           >
             <Menu size={24} />

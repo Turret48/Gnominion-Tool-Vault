@@ -17,9 +17,23 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #EC4899; /* Pink hover */
 }
+
+/* App-like Touch Behaviors */
+html, body {
+  touch-action: manipulation; /* Disable double-tap zoom */
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior-y: none; /* Prevent pull-to-refresh bounce effects */
+}
+
 body {
   background-color: #000000;
   color: #E4E4E7; /* Zinc 200 */
+}
+
+/* Prevent text selection on UI elements */
+button, nav, .cursor-pointer {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* Markdown Styles */
