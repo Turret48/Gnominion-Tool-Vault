@@ -8,7 +8,17 @@ import {
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Tool, PricingBucket, DEFAULT_CATEGORIES } from '../types';
-import { loadTools, saveTools, exportData } from '../services/storageService';
+import { 
+  loadTools, 
+  saveTools, 
+  exportData, 
+  subscribeToTools, 
+  subscribeToCategories,
+  addToolToFirestore,
+  updateToolInFirestore,
+  deleteToolFromFirestore,
+  syncCategoriesToFirestore
+} from '../services/storageService';
 import { enrichToolData } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
 import { signInWithGoogle, logOut } from '../services/auth';
@@ -251,7 +261,6 @@ const LoginModal = ({
       } else if (err.code === 'auth/unauthorized-domain') {
         msg = 'Domain not authorized in Firebase Console (Auth > Settings).';
       } else if (err.message) {
-        // Fallback to the raw message if available
         msg = err.message;
       }
       
@@ -326,10 +335,6 @@ const LoginModal = ({
     </div>
   );
 };
-
-// ... [SettingsModal, AddToolModal, ToolDetail, DeleteConfirmationModal Components remain unchanged] ...
-// Re-implementing simplified versions for context in this file response, 
-// assuming the original code structure wraps them or they are imported.
 
 const SettingsModal = ({
   isOpen,
@@ -963,51 +968,111 @@ export default function Page() {
   
   const { user, loading } = useAuth();
 
-  // 1. Initialize Local Data
+  // 1. Initialize & Sync Data (Firestore vs Local)
   useEffect(() => {
-    // In a future update, this is where we would switch between Firestore and LocalStorage
-    const localTools = loadTools();
-    setTools(localTools);
-    
-    const storedCats = localStorage.getItem('tool_vault_categories');
-    if (storedCats) {
-       try {
-         setCategories(JSON.parse(storedCats));
-       } catch {
-         setCategories(DEFAULT_CATEGORIES);
-       }
+    let unsubscribeTools: () => void;
+    let unsubscribeCats: () => void;
+
+    if (user) {
+      // --- Cloud Mode ---
+      // Subscribe to Firestore changes
+      unsubscribeTools = subscribeToTools(user.uid, (cloudTools) => {
+        setTools(cloudTools);
+      });
+      unsubscribeCats = subscribeToCategories(user.uid, (cloudCats) => {
+        if (cloudCats && cloudCats.length > 0) {
+          setCategories(cloudCats);
+        } else {
+          // Initialize user with default categories if they don't have any yet
+          // (Can optionally do this in handleUpdateCategories, but here ensures defaults load)
+          // For now, we just rely on defaults in state if DB is empty
+        }
+      });
+    } else {
+      // --- Local Mode ---
+      const localTools = loadTools();
+      setTools(localTools);
+      
+      const storedCats = localStorage.getItem('tool_vault_categories');
+      if (storedCats) {
+         try {
+           setCategories(JSON.parse(storedCats));
+         } catch {
+           setCategories(DEFAULT_CATEGORIES);
+         }
+      }
     }
-  }, [user]); // Re-run when auth state changes in the future
 
-  // 2. Persist Data
+    return () => {
+      if (unsubscribeTools) unsubscribeTools();
+      if (unsubscribeCats) unsubscribeCats();
+    };
+  }, [user]);
+
+  // 2. Persist Local Data (Only if not logged in)
   useEffect(() => {
-    saveTools(tools);
-  }, [tools]);
+    if (!user) {
+      saveTools(tools);
+    }
+  }, [tools, user]);
 
   useEffect(() => {
-    localStorage.setItem('tool_vault_categories', JSON.stringify(categories));
-  }, [categories]);
+    if (!user) {
+      localStorage.setItem('tool_vault_categories', JSON.stringify(categories));
+    }
+  }, [categories, user]);
 
   // Actions
-  const handleAddTool = (newTool: Tool) => {
-    setTools(prev => [newTool, ...prev]);
+  const handleAddTool = async (newTool: Tool) => {
+    if (user) {
+      try {
+        await addToolToFirestore(user.uid, newTool);
+      } catch (e) {
+        alert("Failed to save to cloud.");
+        return;
+      }
+    } else {
+      setTools(prev => [newTool, ...prev]);
+    }
     setIsAddModalOpen(false);
   };
 
-  const handleUpdateTool = (updatedTool: Tool) => {
-    setTools(prev => prev.map(t => t.id === updatedTool.id ? updatedTool : t));
-  };
-
-  const handleDeleteTool = () => {
-    if (toolToDelete) {
-      setTools(prev => prev.filter(t => t.id !== toolToDelete.id));
-      setToolToDelete(null);
-      setSelectedToolId(null);
+  const handleUpdateTool = async (updatedTool: Tool) => {
+    if (user) {
+       try {
+         await updateToolInFirestore(user.uid, updatedTool);
+       } catch (e) {
+         alert("Failed to update in cloud.");
+       }
+    } else {
+       setTools(prev => prev.map(t => t.id === updatedTool.id ? updatedTool : t));
     }
   };
 
+  const handleDeleteTool = async () => {
+    if (!toolToDelete) return;
+    
+    if (user) {
+      try {
+        await deleteToolFromFirestore(user.uid, toolToDelete.id);
+      } catch (e) {
+        alert("Failed to delete from cloud.");
+      }
+    } else {
+      setTools(prev => prev.filter(t => t.id !== toolToDelete.id));
+    }
+    setToolToDelete(null);
+    setSelectedToolId(null);
+  };
+
   const handleUpdateCategories = (newCats: string[]) => {
-    setCategories(newCats);
+    if (user) {
+      // Optimistic update for categories to avoid UI jump
+      setCategories(newCats);
+      syncCategoriesToFirestore(user.uid, newCats);
+    } else {
+      setCategories(newCats);
+    }
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1019,13 +1084,23 @@ export default function Page() {
       try {
         const imported = JSON.parse(event.target?.result as string);
         if (Array.isArray(imported)) {
+           // Filter for duplicates based on ID
            const currentIds = new Set(tools.map(t => t.id));
            const uniqueNewTools = imported.filter((t: Tool) => !currentIds.has(t.id));
 
            if (uniqueNewTools.length > 0) {
-             setTools(prev => [...uniqueNewTools, ...prev]);
+             if (user) {
+               // Batch import to firestore? Or one by one for simplicity
+               // Promise.all for speed
+               await Promise.all(uniqueNewTools.map(t => addToolToFirestore(user.uid, t)));
+               alert(`${uniqueNewTools.length} tools imported to cloud.`);
+             } else {
+               setTools(prev => [...uniqueNewTools, ...prev]);
+               alert(`${uniqueNewTools.length} tools imported locally.`);
+             }
+           } else {
+             alert("No new unique tools found in import.");
            }
-           alert(`${uniqueNewTools.length} tools imported locally.`);
         }
       } catch (err) {
         alert("Failed to parse JSON.");
