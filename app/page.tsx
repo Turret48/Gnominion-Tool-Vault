@@ -509,6 +509,7 @@ const AddToolModal = ({
   categories: string[],
   onNotice: (notice: { title: string; message: string }) => void
 }) => {
+  const { user } = useAuth();
   const [step, setStep] = useState<'chat' | 'enriching' | 'review'>('chat');
   const [input, setInput] = useState('');
   const [draftTool, setDraftTool] = useState<Partial<Tool>>({});
