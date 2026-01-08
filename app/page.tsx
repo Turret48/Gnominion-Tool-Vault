@@ -1587,6 +1587,7 @@ export default function Page() {
           onUpdate={handleUpdateTool}
           onRequestDelete={(id) => setToolToDelete(tools.find(t => t.id === id) || null)}
           categories={categories}
+          isAdmin={isAdmin}
         />
       )}
     </div>
