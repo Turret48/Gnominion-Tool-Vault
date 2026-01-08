@@ -3,6 +3,10 @@ import { NextResponse } from 'next/server';
 import type { Firestore } from 'firebase-admin/firestore';
 import { getAdminAuth, getAdminDb, adminFieldValue } from '../../../services/firebaseAdmin';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+
 const DEFAULT_DAILY_LIMIT = 50;
 const DEFAULT_MINUTE_LIMIT = 4;
 
