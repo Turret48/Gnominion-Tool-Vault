@@ -72,3 +72,45 @@ export interface AiEnrichmentResponse {
   websiteUrl?: string;
   whatItDoes?: string;
 }
+
+export type GlobalToolStatus = 'ready' | 'enriching' | 'error';
+
+export interface GlobalTool {
+  toolId: string;
+  canonicalUrl: string;
+  normalizedUrl: string;
+  rootDomain: string;
+  name: string;
+  summary: string;
+  bestUseCases: string[];
+  category: string;
+  tags: string[];
+  integrations: string[];
+  pricingBucket: PricingBucket;
+  pricingNotes: string;
+  logoUrl?: string;
+  websiteUrl?: string;
+  whatItDoes?: string;
+  status: GlobalToolStatus;
+  enrichedAt?: number;
+  enrichVersion: number;
+  aliases: string[];
+}
+
+export interface UserTool {
+  toolId: string;
+  status: ToolStatus;
+  notes: {
+    whatItDoes: string;
+    whenToUse: string;
+    howToUse: string;
+    gotchas: string;
+    links: string;
+  };
+  tags: string[];
+  category: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type MergedTool = Tool;

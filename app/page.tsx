@@ -7,24 +7,61 @@ import {
   Settings, LogIn, LogOut, User as UserIcon, RefreshCw, Activity
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { Tool, PricingBucket, ToolStatus, DEFAULT_CATEGORIES } from '../types';
-import { 
-  loadTools, 
-  saveTools, 
+import { Tool, UserTool, PricingBucket, ToolStatus, DEFAULT_CATEGORIES } from '../types';
+import {
+  loadTools,
+  saveTools,
   clearLocalTools,
-  exportData, 
-  subscribeToTools, 
+  exportData,
+  subscribeToUserTools,
   subscribeToCategories,
-  addToolToFirestore,
-  updateToolInFirestore,
-  deleteToolFromFirestore,
-  syncCategoriesToFirestore
+  addUserToolToFirestore,
+  updateUserToolInFirestore,
+  deleteUserToolFromFirestore,
+  syncCategoriesToFirestore,
+  fetchGlobalTools,
 } from '../services/storageService';
 import { enrichToolData } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
 import { signInWithGoogle, logOut } from '../services/auth';
+import { updateGlobalTool } from '../services/globalToolService';
 
 // 0. Shared UI Components & Helpers
+const EMPTY_NOTES = {
+  whatItDoes: '',
+  whenToUse: '',
+  howToUse: '',
+  gotchas: '',
+  links: ''
+};
+
+const mergeGlobalAndUser = (globalTool: any, userTool: UserTool): Tool => {
+  const notes = userTool.notes || EMPTY_NOTES;
+  return {
+    id: userTool.toolId,
+    name: globalTool?.name || userTool.toolId,
+    url: globalTool?.websiteUrl || globalTool?.canonicalUrl || '',
+    logoUrl: globalTool?.logoUrl || '',
+    summary: globalTool?.summary || '',
+    bestUseCases: globalTool?.bestUseCases || [],
+    category: userTool.category || globalTool?.category || 'Other',
+    tags: userTool.tags || globalTool?.tags || [],
+    integrations: globalTool?.integrations || [],
+    pricingBucket: globalTool?.pricingBucket || PricingBucket.UNKNOWN,
+    pricingNotes: globalTool?.pricingNotes || '',
+    status: userTool.status || ToolStatus.INTERESTED,
+    notes: {
+      whatItDoes: notes.whatItDoes || globalTool?.whatItDoes || '',
+      whenToUse: notes.whenToUse || '',
+      howToUse: notes.howToUse || '',
+      gotchas: notes.gotchas || '',
+      links: notes.links || ''
+    },
+    createdAt: userTool.createdAt,
+    updatedAt: userTool.updatedAt
+  };
+};
+
 const getStatusStyles = (status?: ToolStatus) => {
   switch (status) {
     case ToolStatus.USING:
@@ -490,28 +527,57 @@ const AddToolModal = ({
     e.preventDefault();
     if (!input.trim()) return;
 
+    if (!user) {
+      const now = Date.now();
+      const isUrl = input.trim().startsWith('http');
+      setDraftTool({
+        id: crypto.randomUUID(),
+        name: input.trim(),
+        url: isUrl ? input.trim() : '',
+        summary: '',
+        bestUseCases: [],
+        category: categories[0],
+        tags: [],
+        integrations: [],
+        pricingBucket: PricingBucket.UNKNOWN,
+        pricingNotes: '',
+        status: ToolStatus.INTERESTED,
+        notes: {
+          whatItDoes: '',
+          whenToUse: '',
+          howToUse: '',
+          gotchas: '',
+          links: ''
+        },
+        createdAt: now,
+        updatedAt: now
+      });
+      setStep('review');
+      return;
+    }
+
     setStep('enriching');
     
     try {
       const enriched = await enrichToolData(input, categories);
-      let finalUrl = enriched.websiteUrl || '';
+      let finalUrl = enriched.websiteUrl || enriched.canonicalUrl || '';
       if (!finalUrl && input.trim().startsWith('http')) {
         finalUrl = input.trim();
       }
       
       const now = Date.now();
       setDraftTool({
-        id: crypto.randomUUID(),
+        id: enriched.toolId,
         name: enriched.name,
         url: finalUrl,
         logoUrl: enriched.logoUrl || '',
         summary: enriched.summary,
-        bestUseCases: enriched.bestUseCases,
-        category: enriched.category,
-        tags: enriched.tags,
-        integrations: enriched.integrations,
-        pricingBucket: enriched.pricingBucket,
-        pricingNotes: enriched.pricingNotes,
+        bestUseCases: enriched.bestUseCases || [],
+        category: enriched.category || categories[0],
+        tags: enriched.tags || [],
+        integrations: enriched.integrations || [],
+        pricingBucket: enriched.pricingBucket || PricingBucket.UNKNOWN,
+        pricingNotes: enriched.pricingNotes || '',
         status: ToolStatus.INTERESTED, // Default status for new tools
         notes: {
           whatItDoes: enriched.whatItDoes || '',
@@ -534,6 +600,15 @@ const AddToolModal = ({
         return;
       }
 
+      if (user) {
+        onClose();
+        onNotice({
+          title: 'Enrichment unavailable',
+          message: 'This tool could not be enriched. Try again later.'
+        });
+        return;
+      }
+
       setStep('review');
       setDraftTool({
         name: input,
@@ -546,10 +621,16 @@ const AddToolModal = ({
   };
 
   const handleSave = () => {
-    if (draftTool.name) {
-      onSave(draftTool as Tool);
-      onClose();
+    if (!draftTool.name) return;
+    if (user && !draftTool.id) {
+      onNotice({
+        title: 'Enrichment required',
+        message: 'Unable to save without global tool metadata.'
+      });
+      return;
     }
+    onSave(draftTool as Tool);
+    onClose();
   };
 
   const addTag = (e: React.KeyboardEvent) => {
@@ -729,28 +810,53 @@ const ToolDetail = ({
   onClose, 
   onUpdate,
   onRequestDelete,
-  categories
+  categories,
+  isAdmin
 }: { 
   tool: Tool, 
   onClose: () => void, 
   onUpdate: (t: Tool) => void, 
   onRequestDelete: (id: string) => void,
-  categories: string[]
+  categories: string[],
+  isAdmin: boolean
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
   const [editedTool, setEditedTool] = useState<Tool>(tool);
   const [newTag, setNewTag] = useState('');
+  const canEditGlobal = isAdmin && adminMode && isEditing;
 
   useEffect(() => {
     setEditedTool(tool);
     setIsEditing(false);
+    setAdminMode(false);
   }, [tool]);
 
-  const handleSave = () => {
-    onUpdate({
+  const handleSave = async () => {
+    const nextTool = {
       ...editedTool,
       updatedAt: Date.now()
-    });
+    };
+    onUpdate(nextTool);
+
+    if (isAdmin && adminMode) {
+      try {
+        await updateGlobalTool(editedTool.id, {
+          name: editedTool.name,
+          summary: editedTool.summary,
+          pricingBucket: editedTool.pricingBucket,
+          pricingNotes: editedTool.pricingNotes,
+          bestUseCases: editedTool.bestUseCases,
+          integrations: editedTool.integrations,
+          logoUrl: editedTool.logoUrl,
+          websiteUrl: editedTool.url,
+          whatItDoes: editedTool.notes.whatItDoes
+        });
+      } catch (error: any) {
+        alert(error?.message || 'Failed to update global tool.');
+      }
+    }
+
     setIsEditing(false);
   };
 
@@ -819,6 +925,17 @@ const ToolDetail = ({
       />
       <div className="w-full md:max-w-3xl h-full bg-surface border-l border-border shadow-2xl overflow-hidden flex flex-col pointer-events-auto relative transform transition-transform duration-300 ease-out animate-slide-in-right">
         <div className="absolute top-6 right-4 md:right-6 flex items-center gap-2 z-10">
+          {isAdmin && (
+            <label className="flex items-center gap-2 text-[10px] text-secondary bg-black border border-border px-2 py-1 rounded-full">
+              <input
+                type="checkbox"
+                className="accent-primary"
+                checked={adminMode}
+                onChange={(e) => setAdminMode(e.target.checked)}
+              />
+              Admin edit
+            </label>
+          )}
           {isEditing ? (
             <>
               <button 
@@ -871,7 +988,7 @@ const ToolDetail = ({
                  </div>
               </div>
               <div className="w-full pt-1">
-                {isEditing ? (
+                {canEditGlobal ? (
                    <input 
                     className="text-4xl md:text-5xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none w-full mb-3 pb-2"
                     value={editedTool.name}
@@ -913,7 +1030,7 @@ const ToolDetail = ({
                    )}
 
                    <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
-                   {isEditing ? (
+                   {canEditGlobal ? (
                       <input 
                         className="bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none w-full mt-2 md:mt-0 text-base md:text-sm"
                         value={editedTool.url}
@@ -928,7 +1045,7 @@ const ToolDetail = ({
                 </div>
               </div>
             </div>
-            {isEditing ? (
+            {canEditGlobal ? (
                <textarea
                   className="w-full bg-black border border-border rounded-lg p-4 text-xl text-gray-300"
                   value={editedTool.summary}
@@ -1058,6 +1175,7 @@ export default function Page() {
   const [enrichmentNotice, setEnrichmentNotice] = useState<{ title: string; message: string } | null>(null);
 
   const { user, loading } = useAuth();
+  const isAdmin = user?.email?.toLowerCase() === 'cloudberrystickers@gmail.com';
 
   // 1. Initialize & Sync Data (Firestore vs Local)
   useEffect(() => {
@@ -1071,8 +1189,13 @@ export default function Page() {
       setLocalToolsCount(local.length);
 
       // Subscribe to Firestore changes
-      unsubscribeTools = subscribeToTools(user.uid, (cloudTools) => {
-        setTools(cloudTools);
+      unsubscribeTools = subscribeToUserTools(user.uid, async (userTools) => {
+        const toolIds = userTools.map((tool) => tool.toolId);
+        const globalMap = await fetchGlobalTools(toolIds);
+        const merged = userTools.map((tool) =>
+          mergeGlobalAndUser(globalMap.get(tool.toolId), tool)
+        );
+        setTools(merged);
       });
       unsubscribeCats = subscribeToCategories(user.uid, (cloudCats) => {
         if (cloudCats && cloudCats.length > 0) {
@@ -1119,11 +1242,17 @@ export default function Page() {
     }
   }, [categories, user]);
 
+  const resolveToolForCloud = async (tool: Tool) => {
+    const inputValue = tool.url || tool.name;
+    const resolved = await enrichToolData(inputValue, categories);
+    return { ...tool, id: resolved.toolId };
+  };
+
   // Actions
   const handleAddTool = async (newTool: Tool) => {
     if (user) {
       try {
-        await addToolToFirestore(user.uid, newTool);
+        await addUserToolToFirestore(user.uid, newTool);
       } catch (e) {
         alert("Failed to save to cloud.");
         return;
@@ -1137,7 +1266,7 @@ export default function Page() {
   const handleUpdateTool = async (updatedTool: Tool) => {
     if (user) {
        try {
-         await updateToolInFirestore(user.uid, updatedTool);
+         await updateUserToolInFirestore(user.uid, updatedTool);
        } catch (e) {
          alert("Failed to update in cloud.");
        }
@@ -1151,7 +1280,7 @@ export default function Page() {
     
     if (user) {
       try {
-        await deleteToolFromFirestore(user.uid, toolToDelete.id);
+        await deleteUserToolFromFirestore(user.uid, toolToDelete.id);
       } catch (e) {
         alert("Failed to delete from cloud.");
       }
@@ -1183,7 +1312,10 @@ export default function Page() {
 
     try {
       // Upload one by one to avoid large transaction limits if many tools
-      await Promise.all(local.map(t => addToolToFirestore(user.uid, t)));
+      await Promise.all(local.map(async (t) => {
+        const resolved = await resolveToolForCloud(t);
+        await addUserToolToFirestore(user.uid, resolved);
+      }));
       
       // Clear local storage
       clearLocalTools();
@@ -1212,7 +1344,10 @@ export default function Page() {
              if (user) {
                // Batch import to firestore? Or one by one for simplicity
                // Promise.all for speed
-               await Promise.all(uniqueNewTools.map(t => addToolToFirestore(user.uid, t)));
+               await Promise.all(uniqueNewTools.map(async (t: Tool) => {
+                 const resolved = await resolveToolForCloud(t);
+                 await addUserToolToFirestore(user.uid, resolved);
+               }));
                alert(`${uniqueNewTools.length} tools imported to cloud.`);
              } else {
                setTools(prev => [...uniqueNewTools, ...prev]);
