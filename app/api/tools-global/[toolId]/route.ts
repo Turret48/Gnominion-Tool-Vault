@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAdminAuth, getAdminDb, adminFieldValue } from '../../../services/firebaseAdmin';
+import { getAdminAuth, getAdminDb, adminFieldValue } from '../../../../services/firebaseAdmin';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
