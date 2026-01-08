@@ -34,7 +34,7 @@ export const normalizeUrl = (input: string) => {
   }
 
   const params = new URLSearchParams(url.search);
-  [...params.keys()].forEach((key) => {
+  params.forEach((value, key) => {
     const lower = key.toLowerCase();
     if (lower.startsWith('utm_') || TRACKING_PARAMS.has(lower)) {
       params.delete(key);
@@ -42,7 +42,9 @@ export const normalizeUrl = (input: string) => {
   });
 
   const sorted = new URLSearchParams();
-  [...params.entries()]
+  const entries: Array<[string, string]> = [];
+  params.forEach((value, key) => entries.push([key, value]));
+  entries
     .sort((a, b) => a[0].localeCompare(b[0]))
     .forEach(([key, value]) => sorted.append(key, value));
 
