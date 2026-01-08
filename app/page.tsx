@@ -436,16 +436,41 @@ const SettingsModal = ({
   );
 };
 
+const getEnrichmentNoticeFromError = (message: string) => {
+  if (message.includes('Too many requests')) {
+    return {
+      title: 'Minute Limit Reached',
+      message: 'Minute Limit Reached. You can try again in 60 seconds.'
+    };
+  }
+  if (message.includes('Daily limit reached')) {
+    return {
+      title: 'Daily Limit Reached',
+      message: 'Daily Limit Reached. You can try again in 24 hours.'
+    };
+  }
+  if (message.includes('Authentication required')) {
+    return {
+      title: 'Sign In Required',
+      message: 'Sign in to use AI enrichment.'
+    };
+  }
+
+  return null;
+};
+
 const AddToolModal = ({ 
   isOpen, 
   onClose, 
   onSave,
-  categories 
+  categories,
+  onNotice
 }: { 
   isOpen: boolean, 
   onClose: () => void, 
   onSave: (tool: Tool) => void,
-  categories: string[]
+  categories: string[],
+  onNotice: (notice: { title: string; message: string }) => void
 }) => {
   const [step, setStep] = useState<'chat' | 'enriching' | 'review'>('chat');
   const [input, setInput] = useState('');
@@ -500,8 +525,15 @@ const AddToolModal = ({
       });
 
       setStep('review');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Enrichment failed", error);
+      const notice = error?.message ? getEnrichmentNoticeFromError(error.message) : null;
+      if (notice) {
+        onClose();
+        onNotice(notice);
+        return;
+      }
+
       setStep('review');
       setDraftTool({
         name: input,
@@ -687,6 +719,7 @@ const AddToolModal = ({
           </div>
         )}
       </div>
+
     </div>
   );
 };
@@ -1022,6 +1055,7 @@ export default function Page() {
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [toolToDelete, setToolToDelete] = useState<Tool | null>(null);
   const [localToolsCount, setLocalToolsCount] = useState(0);
+  const [enrichmentNotice, setEnrichmentNotice] = useState<{ title: string; message: string } | null>(null);
 
   const { user, loading } = useAuth();
 
@@ -1360,6 +1394,7 @@ export default function Page() {
         onClose={() => setIsAddModalOpen(false)} 
         onSave={handleAddTool} 
         categories={categories}
+        onNotice={(notice) => setEnrichmentNotice(notice)}
       />
 
       <SettingsModal
@@ -1380,6 +1415,34 @@ export default function Page() {
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
       />
+
+      {enrichmentNotice && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-white">{enrichmentNotice.title}</h3>
+                <p className="text-sm text-secondary mt-2">{enrichmentNotice.message}</p>
+              </div>
+              <button
+                onClick={() => setEnrichmentNotice(null)}
+                className="text-secondary hover:text-white transition-colors"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setEnrichmentNotice(null)}
+                className="px-4 py-2 rounded-full bg-primary text-white text-sm font-bold hover:bg-primaryHover transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedToolId && selectedTool && (
         <ToolDetail 

@@ -39,18 +39,18 @@ export const enrichToolData = async (input: string, availableCategories: string[
       if (response.status === 404) {
         throw new Error("API Route not found (404). If in preview, API features may be unavailable without a server.");
       }
-      if (response.status === 401) {
-        throw new Error("Authentication required for AI enrichment.");
-      }
-      if (response.status === 429) {
-        throw new Error("Daily AI limit reached. Try again tomorrow.");
-      }
+
       const text = await response.text();
       let msg = response.statusText;
       try {
           const json = JSON.parse(text);
           if (json.error) msg = json.error;
       } catch {}
+
+      if (response.status === 401 || response.status === 429) {
+        throw new Error(msg);
+      }
+
       throw new Error(`Server API Error ${response.status}: ${msg}`);
     }
 
@@ -60,6 +60,11 @@ export const enrichToolData = async (input: string, availableCategories: string[
   } catch (error: any) {
     console.error("Enrichment Service Error:", error);
     const msg = error.name === 'AbortError' ? 'Request timed out' : error.message;
+
+    if (msg.includes('Too many requests') || msg.includes('Daily limit reached') || msg.includes('Authentication required')) {
+      throw new Error(msg);
+    }
+
     return createFallback(input, availableCategories, msg);
   }
 };
