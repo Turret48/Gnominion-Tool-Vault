@@ -158,6 +158,7 @@ export const subscribeToUserTools = (
 export const fetchGlobalTools = async (toolIds: string[]) => {
   if (!db || toolIds.length === 0) return new Map<string, GlobalTool>();
 
+  const firestore = db;
   const batches: string[][] = [];
   for (let i = 0; i < toolIds.length; i += 10) {
     batches.push(toolIds.slice(i, i + 10));
@@ -167,7 +168,7 @@ export const fetchGlobalTools = async (toolIds: string[]) => {
   await Promise.all(
     batches.map(async (batch) => {
       const q = query(
-        collection(db, 'tools_global'),
+        collection(firestore, 'tools_global'),
         where(documentId(), 'in', batch)
       );
       const snap = await getDocs(q);
@@ -182,6 +183,7 @@ export const fetchGlobalTools = async (toolIds: string[]) => {
 
 export const fetchGlobalTool = async (toolId: string) => {
   if (!db) return null;
-  const docSnap = await getDoc(doc(db, 'tools_global', toolId));
+  const firestore = db;
+  const docSnap = await getDoc(doc(firestore, 'tools_global', toolId));
   return docSnap.exists() ? (docSnap.data() as GlobalTool) : null;
 };
