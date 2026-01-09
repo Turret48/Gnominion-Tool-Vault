@@ -16,6 +16,13 @@ export const dynamic = 'force-dynamic';
 const DEFAULT_DAILY_LIMIT = 50;
 const DEFAULT_MINUTE_LIMIT = 4;
 const ENRICH_VERSION = 1;
+
+const logEnrich = (label: string, meta: Record<string, string> = {}) => {
+  const context = Object.entries(meta)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(' ');
+  console.log(`[enrich] ${label}${context ? ` ${context}` : ''}`);
+};
 const STALE_DAYS = 30;
 const LOCK_MS = 2 * 60 * 1000;
 
@@ -346,18 +353,22 @@ export async function POST(request: Request) {
 
       const cached = await getCachedTool(adminDb, toolId);
       if (cached) {
+        logEnrich('cache_hit', { toolId, rootDomain });
         return NextResponse.json(cached);
       }
 
       const lock = await lockTool(adminDb, toolId);
       if (!lock.ok) {
+        logEnrich('cache_busy', { toolId, rootDomain });
         return NextResponse.json(
           { error: 'Enrichment in progress. Try again shortly.' },
           { status: 409 }
         );
       }
 
-      const enriched = await enrichWithGemini(input, availableCategories || []);
+      logEnrich('gemini_call', { toolId, rootDomain });
+      logEnrich('gemini_call', { alias });
+    const enriched = await enrichWithGemini(input, availableCategories || []);
       const canonicalUrl = enriched.websiteUrl
         ? normalizeUrl(enriched.websiteUrl)
         : normalizedUrl;
@@ -408,11 +419,13 @@ export async function POST(request: Request) {
         const docSnap = aliasSnap.docs[0];
         const data = docSnap.data();
         if (data?.status === 'ready' && !isStale(data)) {
+          logEnrich('cache_hit', { toolId: docSnap.id, alias });
           return NextResponse.json(
             normalizeGlobalToolResponse(docSnap.id, data)
           );
         }
         if (data?.status === 'enriching' && !lockExpired(data)) {
+          logEnrich('cache_busy', { toolId: docSnap.id, alias });
           return NextResponse.json(
             { error: 'Enrichment in progress. Try again shortly.' },
             { status: 409 }
@@ -421,6 +434,7 @@ export async function POST(request: Request) {
       }
     }
 
+    logEnrich('gemini_call', { alias });
     const enriched = await enrichWithGemini(input, availableCategories || []);
     if (!enriched.websiteUrl) {
       return NextResponse.json(
