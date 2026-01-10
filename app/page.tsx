@@ -1482,7 +1482,7 @@ export default function Page() {
                   onClick={() => setSelectedToolId(tool.id)}
                   className={`
                     group relative bg-surface border border-border hover:border-primary/50 transition-all duration-300 cursor-pointer overflow-hidden
-                    ${viewMode === 'grid' ? 'rounded-2xl p-5 md:p-6 hover:-translate-y-1 hover:shadow-glow' : 'rounded-xl p-4 flex items-center gap-4 md:gap-6 hover:bg-surfaceHover'}
+                    ${viewMode === 'grid' ? 'rounded-2xl p-5 md:p-6 hover:-translate-y-1 hover:shadow-glow' : 'rounded-xl p-4 flex items-center gap-6 md:gap-8 hover:bg-surfaceHover'}
                   `}
                 >
                   <div className={`flex ${viewMode === 'grid' ? 'flex-col items-start' : 'items-center w-full'}`}>
