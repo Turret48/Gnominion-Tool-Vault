@@ -1190,14 +1190,12 @@ const ToolDetail = ({
                 <textarea
                   className="w-full min-h-[120px] bg-black border border-border rounded-lg p-3 text-gray-300 focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                   placeholder="One use case per line"
-                  value={editedTool.bestUseCases.join('
-')}
+                  value={editedTool.bestUseCases.join('\n')}
                   onChange={(e) =>
                     setEditedTool({
                       ...editedTool,
                       bestUseCases: e.target.value
-                        .split('
-')
+                        .split('\n')
                         .map((line) => line.trim())
                         .filter(Boolean)
                     })
