@@ -84,16 +84,31 @@ export const subscribeToCategories = (
   });
 };
 
-const buildUserToolPayload = (tool: Tool): UserTool => ({
-  toolId: tool.id,
-  status: tool.status,
-  notes: tool.notes,
-  tags: tool.tags,
-  category: tool.category,
-  overrides: tool.overrides,
-  createdAt: tool.createdAt,
-  updatedAt: tool.updatedAt,
-});
+const buildUserToolPayload = (tool: Tool): UserTool => {
+  const payload: UserTool = {
+    toolId: tool.id,
+    status: tool.status,
+    notes: tool.notes,
+    tags: tool.tags,
+    category: tool.category,
+    createdAt: tool.createdAt,
+    updatedAt: tool.updatedAt,
+  };
+
+  if (tool.overrides) {
+    const cleanedOverrides: Record<string, unknown> = {};
+    Object.entries(tool.overrides).forEach(([key, value]) => {
+      if (value !== undefined) {
+        cleanedOverrides[key] = value;
+      }
+    });
+    if (Object.keys(cleanedOverrides).length > 0) {
+      payload.overrides = cleanedOverrides;
+    }
+  }
+
+  return payload;
+};
 
 export const addUserToolToFirestore = async (userId: string, tool: Tool) => {
   if (!db) return;
