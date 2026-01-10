@@ -402,29 +402,6 @@ const LoginModal = ({
             Continue in Local Mode
           </button>
         </div>
-
-      {showUnsavedPrompt && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
-            <h3 className="text-lg font-bold text-white">Unsaved changes</h3>
-            <p className="text-sm text-secondary mt-2">Your edits have not been saved. Discard edits?</p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowUnsavedPrompt(false)}
-                className="px-4 py-2 rounded-full bg-surface border border-border text-white text-sm font-medium hover:bg-surfaceHover"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={discardEdits}
-                className="px-4 py-2 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600"
-              >
-                Discard
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       </div>
     </div>
   );
@@ -494,29 +471,6 @@ const SettingsModal = ({
                </p>
             </div>
         </div>
-
-      {showUnsavedPrompt && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
-            <h3 className="text-lg font-bold text-white">Unsaved changes</h3>
-            <p className="text-sm text-secondary mt-2">Your edits have not been saved. Discard edits?</p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowUnsavedPrompt(false)}
-                className="px-4 py-2 rounded-full bg-surface border border-border text-white text-sm font-medium hover:bg-surfaceHover"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={discardEdits}
-                className="px-4 py-2 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600"
-              >
-                Discard
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       </div>
     </div>
   );
@@ -571,6 +525,8 @@ const AddToolModal = ({
       setDraftTool({});
       setNewTag('');
     }
+  }, [isOpen]);
+
   const updateDraftOverride = (field: keyof Tool, value: any, overrideKey?: string) => {
     setDraftTool((prev) => ({
       ...prev,
@@ -581,8 +537,6 @@ const AddToolModal = ({
       }
     }));
   };
-
-  }, [isOpen]);
 
   const handleChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
