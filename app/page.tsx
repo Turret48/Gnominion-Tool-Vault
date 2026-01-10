@@ -850,7 +850,7 @@ const ToolDetail = ({
   useEffect(() => {
     if (lastToolIdRef.current !== tool.id) {
       lastToolIdRef.current = tool.id;
-      setEditedTool(tool);
+      setEditedTool({ ...tool, notes: { ...EMPTY_NOTES, ...(tool.notes || {}) } });
       setIsEditing(false);
       setAdminMode(false);
       setAdvancedMode(false);
@@ -861,7 +861,7 @@ const ToolDetail = ({
     }
 
     if (!isEditing && !adminMode) {
-      setEditedTool(tool);
+      setEditedTool({ ...tool, notes: { ...EMPTY_NOTES, ...(tool.notes || {}) } });
       setIsDirty(false);
       setAdvancedMode(false);
     }
@@ -917,7 +917,7 @@ const ToolDetail = ({
     setIsEditing(false);
     setAdminMode(false);
     setAdvancedMode(false);
-    setEditedTool(tool);
+    setEditedTool({ ...tool, notes: { ...EMPTY_NOTES, ...(tool.notes || {}) } });
   };
 
   const discardEdits = () => {
@@ -928,13 +928,20 @@ const ToolDetail = ({
     setIsEditing(false);
     setAdminMode(false);
     setAdvancedMode(false);
-    setEditedTool(tool);
+    setEditedTool({ ...tool, notes: { ...EMPTY_NOTES, ...(tool.notes || {}) } });
     if (action == 'close') {
       onClose();
     }
   };
 
   const handleSave = async () => {
+    if (canEditGlobal) {
+      const confirmed = window.confirm('These edits will affect this tool for all users. Proceed?');
+      if (!confirmed) {
+        return;
+      }
+    }
+
     const nextTool = {
       ...editedTool,
       updatedAt: Date.now()
@@ -992,11 +999,11 @@ const ToolDetail = ({
       <h3 className="text-xs font-bold text-secondary uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-border/50 pb-2">
         {title}
       </h3>
-      {isEditing ? (
+      {(isEditing && (field !== 'whatItDoes' || canEditAdvanced)) ? (
         <>
           <textarea
             className="w-full min-h-[120px] bg-black border border-border rounded-xl p-4 text-gray-300 leading-relaxed focus:border-primary focus:outline-none transition-colors resize-none font-mono text-base md:text-sm"
-            value={value}
+            value={value || ''}
             onChange={(e) => updateNotes(field, e.target.value)}
             placeholder="Supports Markdown (e.g. **bold**, [link](url), - list)"
           />
@@ -1211,7 +1218,7 @@ const ToolDetail = ({
             </div>
             <div className="md:col-span-2 p-6 rounded-2xl bg-black border border-border">
               <div className="text-xs font-bold text-secondary uppercase tracking-widest mb-4">Best Use Cases</div>
-              {isEditing ? (
+              {canEditAdvanced ? (
                 <textarea
                   className="w-full min-h-[140px] bg-black border border-border rounded-lg p-3 text-gray-300 focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                   placeholder="- One use case per line"
@@ -1252,16 +1259,6 @@ const ToolDetail = ({
           </div>
           <div className="mt-12 pt-8 border-t border-border flex flex-col gap-4">
              {isEditing && (
-               <button
-                 type="button"
-                 onClick={() => setAdvancedMode((prev) => !prev)}
-                 className="self-start text-[11px] uppercase tracking-[0.2em] text-secondary hover:text-primary transition-colors flex items-center gap-2"
-               >
-                 <Settings size={14} className={advancedMode ? 'text-primary' : 'text-secondary'} />
-                 {advancedMode ? 'Advanced Edit On' : 'Advanced Edit'}
-               </button>
-             )}
-             {isEditing && (
                 <input 
                   className="bg-transparent border-b border-border text-base md:text-sm text-white focus:border-primary focus:outline-none w-full py-2"
                   placeholder="Type new tag and press Enter..."
@@ -1278,12 +1275,44 @@ const ToolDetail = ({
                 </span>
               ))}
             </div>
+             {isEditing && (
+               <button
+                 type="button"
+                 onClick={() => setAdvancedMode((prev) => !prev)}
+                 className="self-start text-[11px] uppercase tracking-[0.2em] text-secondary hover:text-primary transition-colors flex items-center gap-2"
+               >
+                 <Settings size={14} className={advancedMode ? 'text-primary' : 'text-secondary'} />
+                 {advancedMode ? 'Advanced Edit On' : 'Advanced Edit'}
+               </button>
+             )}
           </div>
           <div className="text-xs text-gray-700 mt-10 text-center font-mono uppercase tracking-widest opacity-50">
             Added on {new Date(editedTool.createdAt).toLocaleDateString()}
           </div>
         </div>
       </div>
+      {showUnsavedPrompt && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm pointer-events-auto">
+          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
+            <h3 className="text-lg font-bold text-white">Unsaved changes</h3>
+            <p className="text-sm text-secondary mt-2">Your edits have not been saved. Discard edits?</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowUnsavedPrompt(false)}
+                className="px-4 py-2 rounded-full bg-surface border border-border text-white text-sm font-medium hover:bg-surfaceHover"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={discardEdits}
+                className="px-4 py-2 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
