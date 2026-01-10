@@ -57,6 +57,19 @@ export interface Tool {
 
   createdAt: number;
   updatedAt: number;
+  overrides?: ToolOverrides;
+}
+
+
+export interface ToolOverrides {
+  name?: string;
+  websiteUrl?: string;
+  summary?: string;
+  logoUrl?: string;
+  pricingBucket?: PricingBucket;
+  pricingNotes?: string;
+  bestUseCases?: string[];
+  integrations?: string[];
 }
 
 export interface AiEnrichmentResponse {
@@ -109,6 +122,7 @@ export interface UserTool {
   };
   tags: string[];
   category: string;
+  overrides?: ToolOverrides;
   createdAt: number;
   updatedAt: number;
 }

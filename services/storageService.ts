@@ -90,6 +90,7 @@ const buildUserToolPayload = (tool: Tool): UserTool => ({
   notes: tool.notes,
   tags: tool.tags,
   category: tool.category,
+  overrides: tool.overrides,
   createdAt: tool.createdAt,
   updatedAt: tool.updatedAt,
 });

@@ -36,31 +36,34 @@ const EMPTY_NOTES = {
 };
 
 const mergeGlobalAndUser = (globalTool: any, userTool: UserTool): Tool => {
+  const overrides = userTool.overrides || {};
   const notes = userTool.notes || EMPTY_NOTES;
   return {
     id: userTool.toolId,
-    name: globalTool?.name || userTool.toolId,
-    url: globalTool?.websiteUrl || globalTool?.canonicalUrl || '',
-    logoUrl: globalTool?.logoUrl || '',
-    summary: globalTool?.summary || '',
-    bestUseCases: globalTool?.bestUseCases || [],
+    name: overrides.name ?? globalTool?.name ?? userTool.toolId,
+    url: overrides.websiteUrl ?? globalTool?.websiteUrl ?? globalTool?.canonicalUrl ?? '',
+    logoUrl: overrides.logoUrl ?? globalTool?.logoUrl ?? '',
+    summary: overrides.summary ?? globalTool?.summary ?? '',
+    bestUseCases: overrides.bestUseCases ?? globalTool?.bestUseCases ?? [],
     category: userTool.category || globalTool?.category || 'Other',
     tags: userTool.tags || globalTool?.tags || [],
-    integrations: globalTool?.integrations || [],
-    pricingBucket: globalTool?.pricingBucket || PricingBucket.UNKNOWN,
-    pricingNotes: globalTool?.pricingNotes || '',
+    integrations: overrides.integrations ?? globalTool?.integrations ?? [],
+    pricingBucket: overrides.pricingBucket ?? globalTool?.pricingBucket ?? PricingBucket.UNKNOWN,
+    pricingNotes: overrides.pricingNotes ?? globalTool?.pricingNotes ?? '',
     status: userTool.status || ToolStatus.INTERESTED,
     notes: {
-      whatItDoes: notes.whatItDoes || globalTool?.whatItDoes || '',
+      whatItDoes: notes.whatItDoes || '',
       whenToUse: notes.whenToUse || '',
       howToUse: notes.howToUse || '',
       gotchas: notes.gotchas || '',
       links: notes.links || ''
     },
     createdAt: userTool.createdAt,
-    updatedAt: userTool.updatedAt
+    updatedAt: userTool.updatedAt,
+    overrides: userTool.overrides
   };
 };
+
 
 const getStatusStyles = (status?: ToolStatus) => {
   switch (status) {
@@ -399,6 +402,29 @@ const LoginModal = ({
             Continue in Local Mode
           </button>
         </div>
+
+      {showUnsavedPrompt && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
+            <h3 className="text-lg font-bold text-white">Unsaved changes</h3>
+            <p className="text-sm text-secondary mt-2">Your edits have not been saved. Discard edits?</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowUnsavedPrompt(false)}
+                className="px-4 py-2 rounded-full bg-surface border border-border text-white text-sm font-medium hover:bg-surfaceHover"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={discardEdits}
+                className="px-4 py-2 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
@@ -468,6 +494,29 @@ const SettingsModal = ({
                </p>
             </div>
         </div>
+
+      {showUnsavedPrompt && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
+            <h3 className="text-lg font-bold text-white">Unsaved changes</h3>
+            <p className="text-sm text-secondary mt-2">Your edits have not been saved. Discard edits?</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowUnsavedPrompt(false)}
+                className="px-4 py-2 rounded-full bg-surface border border-border text-white text-sm font-medium hover:bg-surfaceHover"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={discardEdits}
+                className="px-4 py-2 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
@@ -522,6 +571,17 @@ const AddToolModal = ({
       setDraftTool({});
       setNewTag('');
     }
+  const updateDraftOverride = (field: keyof Tool, value: any, overrideKey?: string) => {
+    setDraftTool((prev) => ({
+      ...prev,
+      [field]: value,
+      overrides: {
+        ...(prev.overrides || {}),
+        [(overrideKey || field) as string]: value
+      }
+    }));
+  };
+
   }, [isOpen]);
 
   const handleChatSubmit = async (e: React.FormEvent) => {
@@ -621,6 +681,71 @@ const AddToolModal = ({
     }
   };
 
+
+  const updateEditedTool = (updater: (prev: Tool) => Tool) => {
+    setEditedTool((prev) => {
+      const next = updater(prev);
+      return next;
+    });
+    setIsDirty(true);
+  };
+
+  const updateNotes = (field: keyof Tool['notes'], value: string) => {
+    updateEditedTool((prev) => ({
+      ...prev,
+      notes: { ...prev.notes, [field]: value }
+    }));
+  };
+
+  const setField = (field: keyof Tool, value: any, overrideKey?: string) => {
+    if (canEditGlobal) {
+      updateEditedTool((prev) => ({ ...prev, [field]: value }));
+      return;
+    }
+
+    updateEditedTool((prev) => ({
+      ...prev,
+      [field]: value,
+      overrides: {
+        ...(prev.overrides || {}),
+        [(overrideKey || field) as string]: value
+      }
+    }));
+  };
+
+  const requestClose = () => {
+    if (isDirty) {
+      setPendingAction('close');
+      setShowUnsavedPrompt(true);
+      return;
+    }
+    onClose();
+  };
+
+  const requestCancelEdit = () => {
+    if (isDirty) {
+      setPendingAction('cancel');
+      setShowUnsavedPrompt(true);
+      return;
+    }
+    setIsEditing(false);
+    setAdminMode(false);
+    setEditedTool(tool);
+  };
+
+  const discardEdits = () => {
+    setShowUnsavedPrompt(false);
+    setIsDirty(false);
+    const action = pendingAction;
+    setPendingAction(null);
+    setIsEditing(false);
+    setAdminMode(false);
+    setEditedTool(tool);
+    if (action == 'close') {
+      onClose();
+    }
+  };
+
   const handleSave = () => {
     if (!draftTool.name) return;
     if (user && !draftTool.id) {
@@ -709,7 +834,7 @@ const AddToolModal = ({
                     <input 
                       className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                       value={draftTool.name || ''}
-                      onChange={e => setDraftTool({...draftTool, name: e.target.value})}
+                      onChange={e => updateDraftOverride('name', e.target.value)}
                     />
                  </div>
                  <div className="space-y-4">
@@ -717,7 +842,7 @@ const AddToolModal = ({
                     <input 
                       className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                       value={draftTool.url || ''}
-                      onChange={e => setDraftTool({...draftTool, url: e.target.value})}
+                      onChange={e => updateDraftOverride('url', e.target.value, 'websiteUrl')}
                     />
                  </div>
                  <div className="space-y-4">
@@ -735,7 +860,7 @@ const AddToolModal = ({
                     <select 
                       className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                       value={draftTool.pricingBucket || PricingBucket.UNKNOWN}
-                      onChange={e => setDraftTool({...draftTool, pricingBucket: e.target.value as PricingBucket})}
+                      onChange={e => updateDraftOverride('pricingBucket', e.target.value as PricingBucket)}
                     >
                       {Object.values(PricingBucket).map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
@@ -745,7 +870,7 @@ const AddToolModal = ({
                     <input 
                       className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                       value={draftTool.summary || ''}
-                      onChange={e => setDraftTool({...draftTool, summary: e.target.value})}
+                      onChange={e => updateDraftOverride('summary', e.target.value)}
                     />
                  </div>
                  <div className="space-y-4">
@@ -825,13 +950,29 @@ const ToolDetail = ({
   const [adminMode, setAdminMode] = useState(false);
   const [editedTool, setEditedTool] = useState<Tool>(tool);
   const [newTag, setNewTag] = useState('');
+  const [isDirty, setIsDirty] = useState(false);
+  const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'close' | 'cancel' | null>(null);
+  const lastToolIdRef = useRef<string | null>(null);
   const canEditGlobal = isAdmin && adminMode && isEditing;
 
   useEffect(() => {
-    setEditedTool(tool);
-    setIsEditing(false);
-    setAdminMode(false);
-  }, [tool]);
+    if (lastToolIdRef.current !== tool.id) {
+      lastToolIdRef.current = tool.id;
+      setEditedTool(tool);
+      setIsEditing(false);
+      setAdminMode(false);
+      setIsDirty(false);
+      setShowUnsavedPrompt(false);
+      setPendingAction(null);
+      return;
+    }
+
+    if (!isEditing && !adminMode) {
+      setEditedTool(tool);
+      setIsDirty(false);
+    }
+  }, [tool, isEditing, adminMode]);
 
   const handleSave = async () => {
     const nextTool = {
@@ -839,6 +980,7 @@ const ToolDetail = ({
       updatedAt: Date.now()
     };
     onUpdate(nextTool);
+    setIsDirty(false);
 
     if (isAdmin && adminMode) {
       try {
@@ -873,7 +1015,7 @@ const ToolDetail = ({
   };
 
   const removeTag = (tagToRemove: string) => {
-    setEditedTool({ ...editedTool, tags: editedTool.tags.filter(t => t !== tagToRemove) });
+    updateEditedTool((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tagToRemove) }));
   };
 
   const NoteSection = ({ 
@@ -894,10 +1036,7 @@ const ToolDetail = ({
           <textarea
             className="w-full min-h-[120px] bg-black border border-border rounded-xl p-4 text-gray-300 leading-relaxed focus:border-primary focus:outline-none transition-colors resize-none font-mono text-base md:text-sm"
             value={value}
-            onChange={(e) => setEditedTool({
-              ...editedTool,
-              notes: { ...editedTool.notes, [field]: e.target.value }
-            })}
+            onChange={(e) => updateNotes(field, e.target.value)}
             placeholder="Supports Markdown (e.g. **bold**, [link](url), - list)"
           />
           <p className="text-[10px] text-gray-600 mt-1 flex justify-end">Markdown Supported</p>
@@ -940,7 +1079,7 @@ const ToolDetail = ({
           {isEditing ? (
             <>
               <button 
-                onClick={() => setIsEditing(false)}
+                onClick={requestCancelEdit}
                 className="p-2.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
                 title="Cancel"
               >
@@ -971,7 +1110,7 @@ const ToolDetail = ({
                 <Trash2 size={18} />
               </button>
               <button 
-                onClick={onClose}
+                onClick={requestClose}
                 className="p-2.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all ml-2"
               >
                 <X size={18} />
@@ -989,11 +1128,11 @@ const ToolDetail = ({
                  </div>
               </div>
               <div className="w-full pt-1">
-                {canEditGlobal ? (
+                {isEditing ? (
                    <input 
                     className="text-4xl md:text-5xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none w-full mb-3 pb-2"
                     value={editedTool.name}
-                    onChange={(e) => setEditedTool({...editedTool, name: e.target.value})}
+                    onChange={(e) => setField('name', e.target.value)}
                    />
                 ) : (
                    <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight">{editedTool.name}</h1>
@@ -1005,7 +1144,7 @@ const ToolDetail = ({
                           list="category-options-detail"
                           className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
                           value={editedTool.category}
-                          onChange={(e) => setEditedTool({...editedTool, category: e.target.value})}
+                          onChange={(e) => updateEditedTool((prev) => ({ ...prev, category: e.target.value }))}
                           placeholder="Category"
                         />
                         <datalist id="category-options-detail">
@@ -1020,7 +1159,7 @@ const ToolDetail = ({
                      <select 
                        className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
                        value={editedTool.status || ToolStatus.INTERESTED}
-                       onChange={(e) => setEditedTool({...editedTool, status: e.target.value as ToolStatus})}
+                       onChange={(e) => updateEditedTool((prev) => ({ ...prev, status: e.target.value as ToolStatus }))}
                      >
                        {Object.values(ToolStatus).map(s => <option key={s} value={s}>{s}</option>)}
                      </select>
@@ -1031,11 +1170,11 @@ const ToolDetail = ({
                    )}
 
                    <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
-                   {canEditGlobal ? (
+                   {isEditing ? (
                       <input 
                         className="bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none w-full mt-2 md:mt-0 text-base md:text-sm"
                         value={editedTool.url}
-                        onChange={(e) => setEditedTool({...editedTool, url: e.target.value})}
+                        onChange={(e) => setField('url', e.target.value, 'websiteUrl')}
                       />
                    ) : (
                       <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group">
@@ -1046,11 +1185,11 @@ const ToolDetail = ({
                 </div>
               </div>
             </div>
-            {canEditGlobal ? (
+            {isEditing ? (
                <textarea
                   className="w-full bg-black border border-border rounded-lg p-4 text-xl text-gray-300"
                   value={editedTool.summary}
-                  onChange={(e) => setEditedTool({...editedTool, summary: e.target.value})}
+                  onChange={(e) => setField('summary', e.target.value)}
                 />
             ) : (
               <p className="text-xl md:text-2xl text-gray-200 font-light leading-relaxed">
@@ -1061,22 +1200,70 @@ const ToolDetail = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="p-6 rounded-2xl bg-black border border-border">
               <div className="text-xs font-bold text-secondary uppercase tracking-widest mb-2">Pricing</div>
-              <div className="text-white font-semibold text-lg mb-1">{editedTool.pricingBucket}</div>
-              <div className="text-sm text-gray-500">{editedTool.pricingNotes || "No details provided"}</div>
+              {isEditing ? (
+                <select
+                  className="w-full bg-black border border-border rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm mb-3"
+                  value={editedTool.pricingBucket || PricingBucket.UNKNOWN}
+                  onChange={(e) =>
+                    setField('pricingBucket', e.target.value as PricingBucket)
+                  }
+                >
+                  {Object.values(PricingBucket).map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="text-white font-semibold text-lg mb-1">{editedTool.pricingBucket}</div>
+              )}
+              {isEditing ? (
+                <input
+                  className="w-full bg-black border border-border rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                  placeholder="Pricing notes"
+                  value={editedTool.pricingNotes || ''}
+                  onChange={(e) =>
+                    setField('pricingNotes', e.target.value)
+                  }
+                />
+              ) : (
+                <div className="text-sm text-gray-500">{editedTool.pricingNotes || "No details provided"}</div>
+              )}
             </div>
             <div className="md:col-span-2 p-6 rounded-2xl bg-black border border-border">
               <div className="text-xs font-bold text-secondary uppercase tracking-widest mb-4">Best Use Cases</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {editedTool.bestUseCases.map((use, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-sm text-gray-300">
-                    <div className="mt-0.5 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                      <Check size={12} className="text-primary" />
+              {isEditing ? (
+                <textarea
+                  className="w-full min-h-[120px] bg-black border border-border rounded-lg p-3 text-gray-300 focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                  placeholder="One use case per line"
+                  value={editedTool.bestUseCases.join('
+')}
+                  onChange={(e) =>
+                    setEditedTool({
+                      ...editedTool,
+                      bestUseCases: e.target.value
+                        .split('
+')
+                        .map((line) => line.trim())
+                        .filter(Boolean)
+                    })
+                  }
+                />
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {editedTool.bestUseCases.map((use, idx) => (
+                    <div key={idx} className="flex items-start gap-2.5 text-sm text-gray-300">
+                      <div className="mt-0.5 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <Check size={12} className="text-primary" />
+                      </div>
+                      <span>{use}</span>
                     </div>
-                    <span>{use}</span>
-                  </div>
-                ))}
-                {editedTool.bestUseCases.length === 0 && <span className="text-gray-600 text-sm italic">None listed</span>}
-              </div>
+                  ))}
+                  {editedTool.bestUseCases.length === 0 && (
+                    <span className="text-gray-600 text-sm italic">None listed</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <div className="space-y-2">
@@ -1109,6 +1296,29 @@ const ToolDetail = ({
             Added on {new Date(editedTool.createdAt).toLocaleDateString()}
           </div>
         </div>
+
+      {showUnsavedPrompt && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
+            <h3 className="text-lg font-bold text-white">Unsaved changes</h3>
+            <p className="text-sm text-secondary mt-2">Your edits have not been saved. Discard edits?</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowUnsavedPrompt(false)}
+                className="px-4 py-2 rounded-full bg-surface border border-border text-white text-sm font-medium hover:bg-surfaceHover"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={discardEdits}
+                className="px-4 py-2 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
@@ -1151,6 +1361,29 @@ const DeleteConfirmationModal = ({
             Delete
           </button>
         </div>
+
+      {showUnsavedPrompt && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
+            <h3 className="text-lg font-bold text-white">Unsaved changes</h3>
+            <p className="text-sm text-secondary mt-2">Your edits have not been saved. Discard edits?</p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowUnsavedPrompt(false)}
+                className="px-4 py-2 rounded-full bg-surface border border-border text-white text-sm font-medium hover:bg-surfaceHover"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={discardEdits}
+                className="px-4 py-2 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600"
+              >
+                Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
@@ -1492,7 +1725,7 @@ export default function Page() {
                        </div>
                     </div>
                     
-                    <div className="flex-1 min-w-0 w-full">
+                    <div className={`flex-1 min-w-0 w-full ${viewMode === 'list' ? 'pl-2 md:pl-4' : ''}`}>
                       <div className="flex items-center justify-between mb-1 md:mb-2">
                         <h3 className="font-bold text-base md:text-lg text-white group-hover:text-primary transition-colors truncate tracking-tight">{tool.name}</h3>
                         <div className="flex items-center gap-2">
