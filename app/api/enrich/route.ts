@@ -367,8 +367,7 @@ export async function POST(request: Request) {
       }
 
       logEnrich('gemini_call', { toolId, rootDomain });
-      logEnrich('gemini_call', { alias: alias || 'unknown' });
-    const enriched = await enrichWithGemini(input, availableCategories || []);
+      const enriched = await enrichWithGemini(input, availableCategories || []);
       const canonicalUrl = enriched.websiteUrl
         ? normalizeUrl(enriched.websiteUrl)
         : normalizedUrl;
