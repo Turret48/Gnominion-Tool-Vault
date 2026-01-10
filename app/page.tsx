@@ -837,13 +837,15 @@ const ToolDetail = ({
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [adminMode, setAdminMode] = useState(false);
+  const [advancedMode, setAdvancedMode] = useState(false);
   const [editedTool, setEditedTool] = useState<Tool>(tool);
   const [newTag, setNewTag] = useState('');
   const [isDirty, setIsDirty] = useState(false);
   const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false);
   const [pendingAction, setPendingAction] = useState<'close' | 'cancel' | null>(null);
   const lastToolIdRef = useRef<string | null>(null);
-  const canEditGlobal = isAdmin && adminMode && isEditing;
+  const canEditAdvanced = isEditing && advancedMode;
+  const canEditGlobal = isAdmin && adminMode && canEditAdvanced;
 
   useEffect(() => {
     if (lastToolIdRef.current !== tool.id) {
@@ -851,6 +853,7 @@ const ToolDetail = ({
       setEditedTool(tool);
       setIsEditing(false);
       setAdminMode(false);
+      setAdvancedMode(false);
       setIsDirty(false);
       setShowUnsavedPrompt(false);
       setPendingAction(null);
@@ -860,6 +863,7 @@ const ToolDetail = ({
     if (!isEditing && !adminMode) {
       setEditedTool(tool);
       setIsDirty(false);
+      setAdvancedMode(false);
     }
   }, [tool, isEditing, adminMode]);
 
@@ -912,6 +916,7 @@ const ToolDetail = ({
     }
     setIsEditing(false);
     setAdminMode(false);
+    setAdvancedMode(false);
     setEditedTool(tool);
   };
 
@@ -922,6 +927,7 @@ const ToolDetail = ({
     setPendingAction(null);
     setIsEditing(false);
     setAdminMode(false);
+    setAdvancedMode(false);
     setEditedTool(tool);
     if (action == 'close') {
       onClose();
@@ -955,6 +961,7 @@ const ToolDetail = ({
     }
 
     setIsEditing(false);
+    setAdvancedMode(false);
   };
 
   const addTag = (e: React.KeyboardEvent) => {
@@ -1019,16 +1026,34 @@ const ToolDetail = ({
       />
       <div className="w-full md:max-w-3xl h-full bg-surface border-l border-border shadow-2xl overflow-hidden flex flex-col pointer-events-auto relative transform transition-transform duration-300 ease-out animate-slide-in-right">
         <div className="absolute top-6 right-4 md:right-6 flex items-center gap-2 z-10">
-          {isAdmin && (
-            <label className="flex items-center gap-2 text-[10px] text-secondary bg-black border border-border px-2 py-1 rounded-full">
-              <input
-                type="checkbox"
-                className="accent-primary"
-                checked={adminMode}
-                onChange={(e) => setAdminMode(e.target.checked)}
-              />
-              Admin edit
-            </label>
+          {isAdmin && isEditing && (
+            <button
+              type="button"
+              onClick={() => setAdminMode((prev) => !prev)}
+              title={adminMode ? 'Admin edit mode' : 'Personal edit mode'}
+              aria-pressed={adminMode}
+              aria-label="Toggle admin edit mode"
+              className="flex items-center gap-1 p-1 rounded-full bg-black/80 border border-border shadow-[0_0_18px_-10px_rgba(236,72,153,0.6)]"
+            >
+              <span
+                className={`flex items-center justify-center w-7 h-7 rounded-full transition-all ${
+                  adminMode
+                    ? 'text-secondary'
+                    : 'bg-primary/20 text-primary shadow-[0_0_10px_-2px_rgba(236,72,153,0.6)]'
+                }`}
+              >
+                <UserIcon size={14} />
+              </span>
+              <span
+                className={`flex items-center justify-center w-7 h-7 rounded-full transition-all ${
+                  adminMode
+                    ? 'bg-primary/20 text-primary shadow-[0_0_10px_-2px_rgba(236,72,153,0.6)]'
+                    : 'text-secondary'
+                }`}
+              >
+                <Settings size={14} />
+              </span>
+            </button>
           )}
           {isEditing ? (
             <>
@@ -1082,7 +1107,7 @@ const ToolDetail = ({
                  </div>
               </div>
               <div className="w-full pt-1">
-                {isEditing ? (
+                {canEditAdvanced ? (
                    <input 
                     className="text-4xl md:text-5xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none w-full mb-3 pb-2"
                     value={editedTool.name}
@@ -1124,7 +1149,7 @@ const ToolDetail = ({
                    )}
 
                    <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
-                   {isEditing ? (
+                   {canEditAdvanced ? (
                       <input 
                         className="bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none w-full mt-2 md:mt-0 text-base md:text-sm"
                         value={editedTool.url}
@@ -1139,7 +1164,7 @@ const ToolDetail = ({
                 </div>
               </div>
             </div>
-            {isEditing ? (
+            {canEditAdvanced ? (
                <textarea
                   className="w-full bg-black border border-border rounded-lg p-4 text-xl text-gray-300"
                   value={editedTool.summary}
@@ -1154,7 +1179,7 @@ const ToolDetail = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="p-6 rounded-2xl bg-black border border-border">
               <div className="text-xs font-bold text-secondary uppercase tracking-widest mb-2">Pricing</div>
-              {isEditing ? (
+              {canEditAdvanced ? (
                 <select
                   className="w-full bg-black border border-border rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm mb-3"
                   value={editedTool.pricingBucket || PricingBucket.UNKNOWN}
@@ -1171,9 +1196,9 @@ const ToolDetail = ({
               ) : (
                 <div className="text-white font-semibold text-lg mb-1">{editedTool.pricingBucket}</div>
               )}
-              {isEditing ? (
-                <input
-                  className="w-full bg-black border border-border rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+              {canEditAdvanced ? (
+                <textarea
+                  className="w-full min-h-[120px] bg-black border border-border rounded-lg px-3 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm resize-none"
                   placeholder="Pricing notes"
                   value={editedTool.pricingNotes || ''}
                   onChange={(e) =>
@@ -1188,15 +1213,15 @@ const ToolDetail = ({
               <div className="text-xs font-bold text-secondary uppercase tracking-widest mb-4">Best Use Cases</div>
               {isEditing ? (
                 <textarea
-                  className="w-full min-h-[120px] bg-black border border-border rounded-lg p-3 text-gray-300 focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
-                  placeholder="One use case per line"
-                  value={editedTool.bestUseCases.join('\n')}
+                  className="w-full min-h-[140px] bg-black border border-border rounded-lg p-3 text-gray-300 focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                  placeholder="- One use case per line"
+                  value={editedTool.bestUseCases.map((item) => `- ${item}`).join('\n')}
                   onChange={(e) =>
                     setEditedTool({
                       ...editedTool,
                       bestUseCases: e.target.value
                         .split('\n')
-                        .map((line) => line.trim())
+                        .map((line) => line.replace(/^[-*]\s*/, '').trim())
                         .filter(Boolean)
                     })
                   }
@@ -1226,6 +1251,16 @@ const ToolDetail = ({
              <NoteSection title="Links & References" value={editedTool.notes.links} field="links" />
           </div>
           <div className="mt-12 pt-8 border-t border-border flex flex-col gap-4">
+             {isEditing && (
+               <button
+                 type="button"
+                 onClick={() => setAdvancedMode((prev) => !prev)}
+                 className="self-start text-[11px] uppercase tracking-[0.2em] text-secondary hover:text-primary transition-colors flex items-center gap-2"
+               >
+                 <Settings size={14} className={advancedMode ? 'text-primary' : 'text-secondary'} />
+                 {advancedMode ? 'Advanced Edit On' : 'Advanced Edit'}
+               </button>
+             )}
              {isEditing && (
                 <input 
                   className="bg-transparent border-b border-border text-base md:text-sm text-white focus:border-primary focus:outline-none w-full py-2"
