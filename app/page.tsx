@@ -863,6 +863,71 @@ const ToolDetail = ({
     }
   }, [tool, isEditing, adminMode]);
 
+
+  const updateEditedTool = (updater: (prev: Tool) => Tool) => {
+    setEditedTool((prev) => {
+      const next = updater(prev);
+      return next;
+    });
+    setIsDirty(true);
+  };
+
+  const updateNotes = (field: keyof Tool['notes'], value: string) => {
+    updateEditedTool((prev) => ({
+      ...prev,
+      notes: { ...prev.notes, [field]: value }
+    }));
+  };
+
+  const setField = (field: keyof Tool, value: any, overrideKey?: string) => {
+    if (canEditGlobal) {
+      updateEditedTool((prev) => ({ ...prev, [field]: value }));
+      return;
+    }
+
+    updateEditedTool((prev) => ({
+      ...prev,
+      [field]: value,
+      overrides: {
+        ...(prev.overrides || {}),
+        [(overrideKey || field) as string]: value
+      }
+    }));
+  };
+
+  const requestClose = () => {
+    if (isDirty) {
+      setPendingAction('close');
+      setShowUnsavedPrompt(true);
+      return;
+    }
+    onClose();
+  };
+
+  const requestCancelEdit = () => {
+    if (isDirty) {
+      setPendingAction('cancel');
+      setShowUnsavedPrompt(true);
+      return;
+    }
+    setIsEditing(false);
+    setAdminMode(false);
+    setEditedTool(tool);
+  };
+
+  const discardEdits = () => {
+    setShowUnsavedPrompt(false);
+    setIsDirty(false);
+    const action = pendingAction;
+    setPendingAction(null);
+    setIsEditing(false);
+    setAdminMode(false);
+    setEditedTool(tool);
+    if (action == 'close') {
+      onClose();
+    }
+  };
+
   const handleSave = async () => {
     const nextTool = {
       ...editedTool,
@@ -1183,29 +1248,6 @@ const ToolDetail = ({
             Added on {new Date(editedTool.createdAt).toLocaleDateString()}
           </div>
         </div>
-
-      {showUnsavedPrompt && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
-            <h3 className="text-lg font-bold text-white">Unsaved changes</h3>
-            <p className="text-sm text-secondary mt-2">Your edits have not been saved. Discard edits?</p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowUnsavedPrompt(false)}
-                className="px-4 py-2 rounded-full bg-surface border border-border text-white text-sm font-medium hover:bg-surfaceHover"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={discardEdits}
-                className="px-4 py-2 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600"
-              >
-                Discard
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       </div>
     </div>
   );
@@ -1248,29 +1290,6 @@ const DeleteConfirmationModal = ({
             Delete
           </button>
         </div>
-
-      {showUnsavedPrompt && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
-            <h3 className="text-lg font-bold text-white">Unsaved changes</h3>
-            <p className="text-sm text-secondary mt-2">Your edits have not been saved. Discard edits?</p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowUnsavedPrompt(false)}
-                className="px-4 py-2 rounded-full bg-surface border border-border text-white text-sm font-medium hover:bg-surfaceHover"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={discardEdits}
-                className="px-4 py-2 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600"
-              >
-                Discard
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
       </div>
     </div>
   );
