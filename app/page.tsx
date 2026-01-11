@@ -838,6 +838,7 @@ const ToolDetail = ({
   const [isEditing, setIsEditing] = useState(false);
   const [adminMode, setAdminMode] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);
+  const [noteDrafts, setNoteDrafts] = useState(EMPTY_NOTES);
   const [editedTool, setEditedTool] = useState<Tool>(tool);
   const [newTag, setNewTag] = useState('');
   const [isDirty, setIsDirty] = useState(false);
@@ -849,8 +850,10 @@ const ToolDetail = ({
 
   useEffect(() => {
     if (lastToolIdRef.current !== tool.id) {
+      const normalizedNotes = { ...EMPTY_NOTES, ...(tool.notes || {}) };
       lastToolIdRef.current = tool.id;
-      setEditedTool({ ...tool, notes: { ...EMPTY_NOTES, ...(tool.notes || {}) } });
+      setEditedTool({ ...tool, notes: normalizedNotes });
+      setNoteDrafts(normalizedNotes);
       setIsEditing(false);
       setAdminMode(false);
       setAdvancedMode(false);
@@ -861,11 +864,19 @@ const ToolDetail = ({
     }
 
     if (!isEditing && !adminMode) {
-      setEditedTool({ ...tool, notes: { ...EMPTY_NOTES, ...(tool.notes || {}) } });
+      const normalizedNotes = { ...EMPTY_NOTES, ...(tool.notes || {}) };
+      setEditedTool({ ...tool, notes: normalizedNotes });
+      setNoteDrafts(normalizedNotes);
       setIsDirty(false);
       setAdvancedMode(false);
     }
   }, [tool, isEditing, adminMode]);
+
+  useEffect(() => {
+    if (isEditing) {
+      setNoteDrafts({ ...EMPTY_NOTES, ...(editedTool.notes || {}) });
+    }
+  }, [isEditing]);
 
 
   const updateEditedTool = (updater: (prev: Tool) => Tool) => {
@@ -877,10 +888,11 @@ const ToolDetail = ({
   };
 
   const updateNotes = (field: keyof Tool['notes'], value: string) => {
-    updateEditedTool((prev) => ({
+    setNoteDrafts((prev) => ({
       ...prev,
-      notes: { ...prev.notes, [field]: value }
+      [field]: value
     }));
+    setIsDirty(true);
   };
 
   const setField = (field: keyof Tool, value: any, overrideKey?: string) => {
@@ -944,6 +956,7 @@ const ToolDetail = ({
 
     const nextTool = {
       ...editedTool,
+      notes: { ...EMPTY_NOTES, ...noteDrafts },
       updatedAt: Date.now()
     };
     onUpdate(nextTool);
@@ -960,7 +973,7 @@ const ToolDetail = ({
           integrations: editedTool.integrations,
           logoUrl: editedTool.logoUrl,
           websiteUrl: editedTool.url,
-          whatItDoes: editedTool.notes.whatItDoes
+          whatItDoes: noteDrafts.whatItDoes
         });
       } catch (error: any) {
         alert(error?.message || 'Failed to update global tool.');
@@ -1251,11 +1264,11 @@ const ToolDetail = ({
             </div>
           </div>
           <div className="space-y-2">
-             <NoteSection title="What it does" value={editedTool.notes.whatItDoes} field="whatItDoes" />
-             <NoteSection title="When to use" value={editedTool.notes.whenToUse} field="whenToUse" />
-             <NoteSection title="How to use" value={editedTool.notes.howToUse} field="howToUse" />
-             <NoteSection title="Gotchas & Limits" value={editedTool.notes.gotchas} field="gotchas" />
-             <NoteSection title="Links & References" value={editedTool.notes.links} field="links" />
+             <NoteSection title="What it does" value={isEditing ? noteDrafts.whatItDoes : editedTool.notes.whatItDoes} field="whatItDoes" />
+             <NoteSection title="When to use" value={isEditing ? noteDrafts.whenToUse : editedTool.notes.whenToUse} field="whenToUse" />
+             <NoteSection title="How to use" value={isEditing ? noteDrafts.howToUse : editedTool.notes.howToUse} field="howToUse" />
+             <NoteSection title="Gotchas & Limits" value={isEditing ? noteDrafts.gotchas : editedTool.notes.gotchas} field="gotchas" />
+             <NoteSection title="Links & References" value={isEditing ? noteDrafts.links : editedTool.notes.links} field="links" />
           </div>
           <div className="mt-12 pt-8 border-t border-border flex flex-col gap-4">
              {isEditing && (
