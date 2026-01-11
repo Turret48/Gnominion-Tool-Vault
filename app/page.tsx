@@ -1433,6 +1433,8 @@ export default function Page() {
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [catalogTools, setCatalogTools] = useState<GlobalTool[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogCategory, setCatalogCategory] = useState('All');
+  const [catalogSearch, setCatalogSearch] = useState('');
   
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [toolToDelete, setToolToDelete] = useState<Tool | null>(null);
@@ -1531,6 +1533,41 @@ export default function Page() {
     persistOnboarding('empty');
     setIsOnboardingOpen(false);
   };
+
+
+  const CATALOG_TABS = [
+    'All',
+    'Analytics',
+    'Automation',
+    'Design',
+    'Development',
+    'Knowledge Base',
+  ];
+
+  const matchesCatalogCategory = (tool: GlobalTool, tab: string) => {
+    const lower = (tool.category || '').toLowerCase();
+    const tabLower = tab.toLowerCase();
+    if (tabLower === 'all') return true;
+    if (tabLower === 'knowledge base') {
+      return lower.includes('knowledge') || lower.includes('kb');
+    }
+    return lower.includes(tabLower);
+  };
+
+  const matchesCatalogSearch = (tool: GlobalTool, query: string) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      tool.name?.toLowerCase().includes(q) ||
+      tool.summary?.toLowerCase().includes(q) ||
+      tool.tags?.some((tag) => tag.toLowerCase().includes(q))
+    );
+  };
+
+  const filteredCatalogTools = catalogTools.filter((tool) =>
+    matchesCatalogCategory(tool, catalogCategory) &&
+    matchesCatalogSearch(tool, catalogSearch)
+  );
 
   const handleStartCatalog = () => {
     persistOnboarding('catalog');
@@ -2061,31 +2098,69 @@ export default function Page() {
                 <div className="text-sm text-secondary">No tools in the catalog yet.</div>
               )}
               {user && !catalogLoading && catalogTools.length > 0 && (
-                <div className="space-y-3">
-                  {catalogTools.map((tool) => (
-                    <div key={tool.toolId} className="flex items-start justify-between gap-4 p-4 rounded-xl bg-black border border-border">
-                      <div className="min-w-0">
-                        <div className="text-white font-semibold">{tool.name}</div>
-                        <div className="text-xs text-secondary mt-1">{tool.summary}</div>
-                        {tool.tags && tool.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {tool.tags.slice(0, 6).map((tag) => (
-                              <span key={tag} className="px-2 py-0.5 rounded-full bg-surface border border-border text-[10px] text-secondary">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleAddCatalogTool(tool)}
-                        className="shrink-0 px-4 py-2 rounded-full bg-primary text-white text-xs font-bold hover:bg-primaryHover transition-colors"
-                      >
-                        Add to Vault
-                      </button>
+                <>
+                  <div className="mb-4">
+                    <div className="relative mb-3">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
+                      <input
+                        type="text"
+                        value={catalogSearch}
+                        onChange={(e) => setCatalogSearch(e.target.value)}
+                        placeholder="Search catalog..."
+                        className="w-full bg-black border border-border rounded-full py-2 pl-9 pr-4 text-gray-200 focus:outline-none focus:border-primary/50 transition-all text-sm"
+                      />
                     </div>
-                  ))}
-                </div>
+                    <div className="flex flex-wrap gap-2">
+                    {CATALOG_TABS.map((tab) => (
+                      <button
+                        key={tab}
+                        onClick={() => setCatalogCategory(tab)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                          catalogCategory === tab
+                            ? 'bg-primary/20 text-primary border-primary/30'
+                            : 'bg-black text-secondary border-border hover:text-white hover:border-gray-500'
+                        }`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                  </div>
+                  {filteredCatalogTools.length === 0 ? (
+                    <div className="text-sm text-secondary">No tools in this category yet.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredCatalogTools.map((tool) => (
+                        <div key={tool.toolId} className="flex items-start justify-between gap-4 p-4 rounded-xl bg-black border border-border">
+                          <div className="flex items-start gap-4 min-w-0">
+                            <div className="w-10 h-10 rounded-lg bg-black border border-border overflow-hidden shrink-0">
+                              <ToolIcon url={tool.logoUrl} websiteUrl={tool.websiteUrl} name={tool.name} />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-white font-semibold">{tool.name}</div>
+                              <div className="text-xs text-secondary mt-1">{tool.summary}</div>
+                              {tool.tags && tool.tags.length > 0 && (
+                                <div className="flex flex-wrap gap-2 mt-2">
+                                  {tool.tags.slice(0, 6).map((tag) => (
+                                    <span key={tag} className="px-2 py-0.5 rounded-full bg-surface border border-border text-[10px] text-secondary">
+                                      {tag}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleAddCatalogTool(tool)}
+                            className="shrink-0 px-4 py-2 rounded-full bg-primary text-white text-xs font-bold hover:bg-primaryHover transition-colors"
+                          >
+                            Add to Vault
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
