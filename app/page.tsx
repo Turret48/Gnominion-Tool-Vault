@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, Plus, X, LayoutGrid, List as ListIcon, Database, ArrowUpRight, Hash, Tag, 
   Check, Save, Trash2, Download, Upload, Cpu, Zap, PenTool, Mail, BarChart2, AlertTriangle, Menu,
-  Settings, LogIn, LogOut, User as UserIcon, RefreshCw, Activity
+  Settings, LogIn, LogOut, User as UserIcon, RefreshCw, Activity, BookOpen
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Tool, UserTool, PricingBucket, ToolStatus, DEFAULT_CATEGORIES } from '../types';
@@ -1392,6 +1392,9 @@ export default function Page() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [toolToDelete, setToolToDelete] = useState<Tool | null>(null);
@@ -1465,6 +1468,37 @@ export default function Page() {
       localStorage.setItem('tool_vault_categories', JSON.stringify(categories));
     }
   }, [categories, user]);
+
+  useEffect(() => {
+    if (user) {
+      // Show on every login for now (testing); still persist the flag.
+      setOnboardingStep(0);
+      setIsOnboardingOpen(true);
+    } else {
+      setIsOnboardingOpen(false);
+    }
+  }, [user]);
+
+  const persistOnboarding = (startMode: 'empty' | 'catalog') => {
+    localStorage.setItem('tool_vault_onboarding_completed', 'true');
+    localStorage.setItem('tool_vault_onboarding_start_mode', startMode);
+  };
+
+  const handleOnboardingSkip = () => {
+    persistOnboarding('empty');
+    setIsOnboardingOpen(false);
+  };
+
+  const handleStartEmpty = () => {
+    persistOnboarding('empty');
+    setIsOnboardingOpen(false);
+  };
+
+  const handleStartCatalog = () => {
+    persistOnboarding('catalog');
+    setIsOnboardingOpen(false);
+    setIsCatalogOpen(true);
+  };
 
   const resolveToolForCloud = async (tool: Tool) => {
     const inputValue = tool.url || tool.name;
@@ -1662,6 +1696,13 @@ export default function Page() {
             </div>
             
             <button 
+              onClick={() => setIsCatalogOpen(true)}
+              className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full bg-surface border border-border text-xs font-bold text-secondary hover:text-white hover:border-gray-500 transition-all"
+            >
+              <BookOpen size={16} />
+              Tool Catalog
+            </button>
+            <button 
               onClick={() => setIsAddModalOpen(true)}
               className="flex items-center justify-center gap-2 bg-primary text-white w-10 h-10 md:w-auto md:h-auto md:px-5 md:py-2.5 rounded-full font-bold text-sm hover:bg-primaryHover transition-all shadow-[0_0_20px_-5px_rgba(236,72,153,0.4)] hover:shadow-[0_0_25px_-5px_rgba(236,72,153,0.6)]"
             >
@@ -1803,6 +1844,107 @@ export default function Page() {
         </div>
       )}
 
+
+      {isOnboardingOpen && user && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+          <div className="bg-surface border border-border rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl animate-fade-in-up">
+            <div className="p-8">
+              {onboardingStep === 0 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">Welcome to Tool Vault</h2>
+                  <p className="text-secondary text-sm md:text-base">A place to organize tools you use, test, or want to remember. Fully customizable and searchable.</p>
+                  <div className="space-y-2 text-sm text-gray-300">
+                    <div className="flex items-center gap-2"><Check size={16} className="text-primary" /> Organize tools in one place</div>
+                    <div className="flex items-center gap-2"><Check size={16} className="text-primary" /> Add notes, tags, and status</div>
+                    <div className="flex items-center gap-2"><Check size={16} className="text-primary" /> Search instantly across your vault</div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={handleOnboardingSkip}
+                      className="text-xs text-secondary hover:text-white transition-colors"
+                    >
+                      Skip
+                    </button>
+                    <button
+                      onClick={() => setOnboardingStep(1)}
+                      className="px-6 py-2.5 rounded-full bg-primary text-white text-sm font-bold hover:bg-primaryHover transition-colors"
+                    >
+                      Get Started
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {onboardingStep === 1 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">How you?ll use Tool Vault</h2>
+                  <div className="space-y-4 text-sm text-gray-300">
+                    <div className="flex items-start gap-3"><span className="text-primary font-bold">1.</span> Add a tool ? Paste a name or URL and let Tool Vault fill the basics</div>
+                    <div className="flex items-start gap-3"><span className="text-primary font-bold">2.</span> Edit it ? Add your personal notes, tags, and status</div>
+                    <div className="flex items-start gap-3"><span className="text-primary font-bold">3.</span> Remove it ? Delete tools anytime (your vault, your rules)</div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <button
+                      onClick={handleOnboardingSkip}
+                      className="text-xs text-secondary hover:text-white transition-colors"
+                    >
+                      Skip
+                    </button>
+                    <button
+                      onClick={() => setOnboardingStep(2)}
+                      className="px-6 py-2.5 rounded-full bg-primary text-white text-sm font-bold hover:bg-primaryHover transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {onboardingStep === 2 && (
+                <div className="space-y-6">
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">How do you want to start?</h2>
+                  <div className="space-y-3">
+                    <button
+                      onClick={handleStartEmpty}
+                      className="w-full text-left p-4 rounded-xl bg-black border border-border hover:border-primary/50 transition-colors"
+                    >
+                      <div className="text-white font-semibold">Start With Empty Vault</div>
+                    </button>
+                    <button
+                      onClick={handleStartCatalog}
+                      className="w-full text-left p-4 rounded-xl bg-black border border-border hover:border-primary/50 transition-colors"
+                    >
+                      <div className="text-white font-semibold">Browse Tool Catalog</div>
+                      <div className="text-xs text-secondary mt-1">You can revisit the Tool Catalog at any time.</div>
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-secondary">You can revisit the Tool Catalog anytime to add tools to your vault.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCatalogOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+          <div className="bg-surface border border-border rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl p-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-white font-bold"><BookOpen size={18} /> Tool Catalog</div>
+              <button onClick={() => setIsCatalogOpen(false)} className="text-secondary hover:text-white"><X size={18} /></button>
+            </div>
+            <p className="text-sm text-secondary mt-4">You can browse the Tool Catalog anytime to add tools to your vault.</p>
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setIsCatalogOpen(false)}
+                className="px-4 py-2 rounded-full bg-primary text-white text-sm font-bold hover:bg-primaryHover transition-colors"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {selectedToolId && selectedTool && (
         <ToolDetail 
           tool={selectedTool}

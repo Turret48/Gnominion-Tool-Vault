@@ -1,12 +1,12 @@
 # Tool Vault - Technical Steering & Architecture
 
 ## 1. Technology Stack
-*   **Framework**: Next.js 16 (App Router) + React 19.
+*   **Framework**: Next.js 14 (App Router) + React 18.
 *   **Language**: TypeScript.
-*   **Styling**: Tailwind CSS 4.x.
+*   **Styling**: Tailwind CSS 3.4.x.
 *   **Icons**: Lucide React.
 *   **AI SDK**: `@google/genai` (Google Gemini API).
-*   **Backend/Auth**: Firebase v12 (Auth + Firestore).
+*   **Backend/Auth**: Firebase (Auth + Firestore).
 *   **Build/Runtime**: ES Modules via `esm.sh` (in `index.html`) or Standard Next.js build.
 
 ## 2. Architecture Patterns
@@ -15,7 +15,7 @@
     *   `app/api/enrich/route.ts`: Server-Side API Route acting as a secure proxy for Gemini API calls to protect keys in production.
 *   **Services Layer**:
     *   `services/geminiService.ts`: Handles AI interactions, falling back to Server API if client key is missing.
-    *   `services/storageService.ts`: Abstraction layer handling both `localStorage` and Firestore interactions seamlessly.
+    *   `services/storageService.ts`: Abstraction layer for `localStorage` + Firestore, including global tool cache reads.
 *   **Sync Logic**: 
     *   Upon authentication (`AuthContext`), the app checks for local tools.
     *   Users can explicitly trigger a "Sync Local to Cloud" action which pushes local data to Firestore and clears local storage.
@@ -28,6 +28,8 @@
 *   **Prompting Strategy**:
     *   The system instruction forces the AI to act as a "Software Directory Curator."
     *   Strict Enum enforcement for `Category` and `PricingBucket`.
+*   **Rate Limiting**:
+    *   Per-user limits enforced server-side in `app/api/enrich/route.ts` (daily + per-minute).
 
 ## 4. Mobile & Responsive Strategy
 *   **Breakpoints**:
@@ -52,3 +54,8 @@
 *   **Components**: Single-file component structure in `page.tsx` is acceptable for this scale, but abstract if complexity grows.
 *   **State**: Lifted state in `Page` component.
 *   **Security**: Never expose API keys in client-side code unless explicitly intended for local dev (use `process.env` checks).
+*   **Global Tool Cache**:
+    *   Global metadata lives in `tools_global/{toolId}`.
+    *   User-specific data lives in `users/{uid}/saved_tools/{toolId}` with optional `overrides`.
+*   **Admin Edits**:
+    *   Global edits are admin-only (email allowlist) and gated by admin toggle + confirm.

@@ -27,6 +27,10 @@ When a user adds a tool (e.g., "Zapier" or "https://figma.com"):
 *   Markdown support for all note fields.
 
 ### D. Data Management
+*   **Global Cache**: Enriched tool metadata is cached globally and reused across users.
+*   **User Overrides**: Users can override global fields in their own vault without changing the shared cache.
+*   **Admin Fixes**: Admin can update global metadata (with confirm) for all users.
+*   **Advanced Edit**: Some fields (global-ish metadata) are gated behind an Advanced Edit toggle while in edit mode.
 *   **Hybrid Storage**:
     *   **Local Mode**: Uses `localStorage` for guests.
     *   **Cloud Mode**: Syncs with user's private Firebase Firestore instance upon login.
@@ -35,6 +39,8 @@ When a user adds a tool (e.g., "Zapier" or "https://figma.com"):
 *   **Safety**: Explicit delete confirmation modals to prevent accidental data loss.
 
 ## 4. User Experience
+*   **Onboarding**: Short, optional 3-step modal on login (testing shows every login). Users can skip, start empty, or open the Tool Catalog.
+*   **Tool Catalog**: Accessible via a persistent header button (modal placeholder for now).
 *   **Desktop (LG+)**: Fixed sidebar navigation, large grid layout, optimized for mouse/keyboard.
 *   **Mobile/Tablet (<LG)**: 
     *   Slide-out drawer navigation (Hamburger menu).
