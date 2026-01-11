@@ -1015,8 +1015,9 @@ const ToolDetail = ({
       {(isEditing && (field !== 'whatItDoes' || canEditAdvanced)) ? (
         <>
           <textarea
+            key={`${editedTool.id}-${field}-${advancedMode ? 'adv' : 'base'}-${isEditing ? 'edit' : 'view'}`}
             className="w-full min-h-[120px] bg-black border border-border rounded-xl p-4 text-gray-300 leading-relaxed focus:border-primary focus:outline-none transition-colors resize-none font-mono text-base md:text-sm"
-            value={value || ''}
+            defaultValue={value || ''}
             onChange={(e) => updateNotes(field, e.target.value)}
             placeholder="Supports Markdown (e.g. **bold**, [link](url), - list)"
           />
