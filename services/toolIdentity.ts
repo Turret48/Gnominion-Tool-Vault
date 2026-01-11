@@ -29,8 +29,16 @@ export const normalizeUrl = (input: string) => {
     url.hostname = url.hostname.slice(4);
   }
 
+  if (url.port === '80' || url.port === '443') {
+    url.port = '';
+  }
+
+  url.hash = '';
+
   if (url.pathname === '/') {
     url.pathname = '';
+  } else if (url.pathname.endsWith('/')) {
+    url.pathname = url.pathname.slice(0, -1);
   }
 
   const params = new URLSearchParams(url.search);
@@ -53,8 +61,10 @@ export const normalizeUrl = (input: string) => {
 };
 
 export const getRootDomain = (hostname: string) => {
-  const lower = hostname.toLowerCase();
-  return lower.startsWith('www.') ? lower.slice(4) : lower;
+  let lower = hostname.toLowerCase();
+  if (lower.startsWith('www.')) lower = lower.slice(4);
+  if (lower.startsWith('app.')) lower = lower.slice(4);
+  return lower;
 };
 
 export const looksLikeUrl = (input: string) => isLikelyUrl(input);

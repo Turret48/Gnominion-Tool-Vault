@@ -1558,6 +1558,12 @@ export default function Page() {
 
   const handleAddCatalogTool = async (globalTool: GlobalTool) => {
     if (!user) return;
+    const existing = tools.find((t) => t.id === globalTool.toolId);
+    if (existing) {
+      alert('This tool is already in your vault.');
+      openExistingTool(existing.id);
+      return;
+    }
     try {
       const tool = globalToTool(globalTool);
       await addUserToolToFirestore(user.uid, tool);
@@ -1588,8 +1594,21 @@ export default function Page() {
     return { ...tool, id: resolved.toolId };
   };
 
+
+  const openExistingTool = (toolId: string) => {
+    setSelectedToolId(toolId);
+  };
+
   // Actions
   const handleAddTool = async (newTool: Tool) => {
+    const existing = tools.find((t) => t.id === newTool.id);
+    if (existing) {
+      alert('This tool is already in your vault.');
+      openExistingTool(existing.id);
+      setIsAddModalOpen(false);
+      return;
+    }
+
     if (user) {
       try {
         await addUserToolToFirestore(user.uid, newTool);
@@ -1652,8 +1671,10 @@ export default function Page() {
 
     try {
       // Upload one by one to avoid large transaction limits if many tools
+      const existingIds = new Set(tools.map((t) => t.id));
       await Promise.all(local.map(async (t) => {
         const resolved = await resolveToolForCloud(t);
+        if (existingIds.has(resolved.id)) return;
         await addUserToolToFirestore(user.uid, resolved);
       }));
       

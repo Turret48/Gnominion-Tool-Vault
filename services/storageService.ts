@@ -175,8 +175,7 @@ export const subscribeToUserTools = (
 export const fetchCatalogEntries = async () => {
   if (!db) return [] as ToolCatalogEntry[];
   const firestore = db;
-  const q = query(collection(firestore, 'tools_catalog'), orderBy('addedAt', 'desc'));
-  const snap = await getDocs(q);
+  const snap = await getDocs(collection(firestore, 'tools_catalog'));
   return snap.docs.map((docSnap) => docSnap.data() as ToolCatalogEntry);
 };
 

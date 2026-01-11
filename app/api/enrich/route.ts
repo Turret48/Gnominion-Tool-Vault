@@ -349,6 +349,32 @@ export async function POST(request: Request) {
       const normalizedUrl = normalizeUrl(input);
       const hostname = new URL(normalizedUrl).hostname;
       const rootDomain = getRootDomain(hostname);
+      const aliasCandidates = [
+        normalizeTextAlias(input),
+        normalizeTextAlias(normalizedUrl),
+        normalizeTextAlias(hostname),
+        normalizeTextAlias(rootDomain),
+      ].filter(Boolean) as string[];
+
+      for (const candidate of aliasCandidates) {
+        const aliasSnap = await adminDb
+          .collection('tools_global')
+          .where('aliases', 'array-contains', candidate)
+          .limit(1)
+          .get();
+
+        if (!aliasSnap.empty) {
+          const docSnap = aliasSnap.docs[0];
+          const data = docSnap.data();
+          if (data?.status === 'ready' && !isStale(data)) {
+            logEnrich('cache_hit', { toolId: docSnap.id, alias: candidate });
+            return NextResponse.json(
+              normalizeGlobalToolResponse(docSnap.id, data)
+            );
+          }
+        }
+      }
+
       const toolId = computeToolId(rootDomain);
 
       const cached = await getCachedTool(adminDb, toolId);
