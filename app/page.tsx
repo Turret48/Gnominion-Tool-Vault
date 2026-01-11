@@ -1877,11 +1877,26 @@ export default function Page() {
 
               {onboardingStep === 1 && (
                 <div className="space-y-6">
-                  <h2 className="text-2xl md:text-3xl font-bold text-white">How you?ll use Tool Vault</h2>
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">How you'll use Tool Vault</h2>
                   <div className="space-y-4 text-sm text-gray-300">
-                    <div className="flex items-start gap-3"><span className="text-primary font-bold">1.</span> Add a tool ? Paste a name or URL and let Tool Vault fill the basics</div>
-                    <div className="flex items-start gap-3"><span className="text-primary font-bold">2.</span> Edit it ? Add your personal notes, tags, and status</div>
-                    <div className="flex items-start gap-3"><span className="text-primary font-bold">3.</span> Remove it ? Delete tools anytime (your vault, your rules)</div>
+                    <div className="flex items-start gap-3">
+                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-black border border-border text-secondary">
+                        <Plus size={16} />
+                      </span>
+                      <div>Add a tool ? Paste a name or URL and let Tool Vault fill the basics</div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-black border border-border text-secondary">
+                        <PenTool size={16} />
+                      </span>
+                      <div>Edit it ? Add your personal notes, tags, and status</div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-black border border-border text-secondary">
+                        <Trash2 size={16} />
+                      </span>
+                      <div>Remove it ? Delete tools anytime (your vault, your rules)</div>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
                     <button
@@ -1915,8 +1930,7 @@ export default function Page() {
                       className="w-full text-left p-4 rounded-xl bg-black border border-border hover:border-primary/50 transition-colors"
                     >
                       <div className="text-white font-semibold">Browse Tool Catalog</div>
-                      <div className="text-xs text-secondary mt-1">You can revisit the Tool Catalog at any time.</div>
-                    </button>
+                                          </button>
                   </div>
                   <p className="text-[11px] text-secondary">You can revisit the Tool Catalog anytime to add tools to your vault.</p>
                 </div>
