@@ -820,6 +820,52 @@ const AddToolModal = ({
   );
 };
 
+
+const NoteSection = ({
+  title,
+  value,
+  field,
+  isEditing,
+  canEditAdvanced,
+  onChange
+}: {
+  title: string;
+  value: string;
+  field: keyof Tool['notes'];
+  isEditing: boolean;
+  canEditAdvanced: boolean;
+  onChange: (field: keyof Tool['notes'], value: string) => void;
+}) => (
+  <div className="mb-10 group">
+    <h3 className="text-xs font-bold text-secondary uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-border/50 pb-2">
+      {title}
+    </h3>
+    {(isEditing && (field !== 'whatItDoes' || canEditAdvanced)) ? (
+      <>
+        <textarea
+          className="w-full min-h-[120px] bg-black border border-border rounded-xl p-4 text-gray-300 leading-relaxed focus:border-primary focus:outline-none transition-colors resize-none font-mono text-base md:text-sm"
+          value={value}
+          onChange={(e) => onChange(field, e.target.value)}
+          placeholder="Supports Markdown (e.g. **bold**, [link](url), - list)"
+        />
+        <p className="text-[10px] text-gray-600 mt-1 flex justify-end">Markdown Supported</p>
+      </>
+    ) : (
+      <div className="text-gray-300 leading-relaxed text-[15px] markdown-body">
+        {value ? (
+          <ReactMarkdown components={{
+            a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" />
+          }}>
+            {value}
+          </ReactMarkdown>
+        ) : (
+          <span className="text-gray-600 italic">No notes added yet.</span>
+        )}
+      </div>
+    )}
+  </div>
+);
+
 const ToolDetail = ({ 
   tool, 
   onClose, 
@@ -998,46 +1044,6 @@ const ToolDetail = ({
   const removeTag = (tagToRemove: string) => {
     updateEditedTool((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tagToRemove) }));
   };
-
-  const NoteSection = ({ 
-    title, 
-    value, 
-    field 
-  }: { 
-    title: string, 
-    value: string, 
-    field: keyof Tool['notes'] 
-  }) => (
-    <div className="mb-10 group">
-      <h3 className="text-xs font-bold text-secondary uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-border/50 pb-2">
-        {title}
-      </h3>
-      {(isEditing && (field !== 'whatItDoes' || canEditAdvanced)) ? (
-        <>
-          <textarea
-            key={`${editedTool.id}-${field}-${advancedMode ? 'adv' : 'base'}-${isEditing ? 'edit' : 'view'}`}
-            className="w-full min-h-[120px] bg-black border border-border rounded-xl p-4 text-gray-300 leading-relaxed focus:border-primary focus:outline-none transition-colors resize-none font-mono text-base md:text-sm"
-            defaultValue={value || ''}
-            onChange={(e) => updateNotes(field, e.target.value)}
-            placeholder="Supports Markdown (e.g. **bold**, [link](url), - list)"
-          />
-          <p className="text-[10px] text-gray-600 mt-1 flex justify-end">Markdown Supported</p>
-        </>
-      ) : (
-        <div className="text-gray-300 leading-relaxed text-[15px] markdown-body">
-          {value ? (
-            <ReactMarkdown components={{
-              a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" />
-            }}>
-              {value}
-            </ReactMarkdown>
-          ) : (
-            <span className="text-gray-600 italic">No notes added yet.</span>
-          )}
-        </div>
-      )}
-    </div>
-  );
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end pointer-events-none">
@@ -1265,11 +1271,11 @@ const ToolDetail = ({
             </div>
           </div>
           <div className="space-y-2">
-             <NoteSection title="What it does" value={isEditing ? noteDrafts.whatItDoes : editedTool.notes.whatItDoes} field="whatItDoes" />
-             <NoteSection title="When to use" value={isEditing ? noteDrafts.whenToUse : editedTool.notes.whenToUse} field="whenToUse" />
-             <NoteSection title="How to use" value={isEditing ? noteDrafts.howToUse : editedTool.notes.howToUse} field="howToUse" />
-             <NoteSection title="Gotchas & Limits" value={isEditing ? noteDrafts.gotchas : editedTool.notes.gotchas} field="gotchas" />
-             <NoteSection title="Links & References" value={isEditing ? noteDrafts.links : editedTool.notes.links} field="links" />
+             <NoteSection title="What it does" value={isEditing ? noteDrafts.whatItDoes : editedTool.notes.whatItDoes} field="whatItDoes" isEditing={isEditing} canEditAdvanced={canEditAdvanced} onChange={updateNotes} />
+             <NoteSection title="When to use" value={isEditing ? noteDrafts.whenToUse : editedTool.notes.whenToUse} field="whenToUse" isEditing={isEditing} canEditAdvanced={canEditAdvanced} onChange={updateNotes} />
+             <NoteSection title="How to use" value={isEditing ? noteDrafts.howToUse : editedTool.notes.howToUse} field="howToUse" isEditing={isEditing} canEditAdvanced={canEditAdvanced} onChange={updateNotes} />
+             <NoteSection title="Gotchas & Limits" value={isEditing ? noteDrafts.gotchas : editedTool.notes.gotchas} field="gotchas" isEditing={isEditing} canEditAdvanced={canEditAdvanced} onChange={updateNotes} />
+             <NoteSection title="Links & References" value={isEditing ? noteDrafts.links : editedTool.notes.links} field="links" isEditing={isEditing} canEditAdvanced={canEditAdvanced} onChange={updateNotes} />
           </div>
           <div className="mt-12 pt-8 border-t border-border flex flex-col gap-4">
              {isEditing && (
