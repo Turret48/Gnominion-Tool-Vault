@@ -7,7 +7,7 @@ import {
   Settings, LogIn, LogOut, User as UserIcon, RefreshCw, Activity, BookOpen
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { Tool, UserTool, PricingBucket, ToolStatus, DEFAULT_CATEGORIES } from '../types';
+import { Tool, UserTool, GlobalTool, PricingBucket, ToolStatus, DEFAULT_CATEGORIES } from '../types';
 import {
   loadTools,
   saveTools,
@@ -20,11 +20,13 @@ import {
   deleteUserToolFromFirestore,
   syncCategoriesToFirestore,
   fetchGlobalTools,
+  fetchCatalogEntries,
 } from '../services/storageService';
 import { enrichToolData } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
 import { signInWithGoogle, logOut } from '../services/auth';
 import { updateGlobalTool } from '../services/globalToolService';
+import { addToolToCatalog } from '../services/catalogService';
 
 // 0. Shared UI Components & Helpers
 const EMPTY_NOTES = {
@@ -64,6 +66,28 @@ const mergeGlobalAndUser = (globalTool: any, userTool: UserTool): Tool => {
   };
 };
 
+
+
+const globalToTool = (globalTool: GlobalTool): Tool => {
+  const now = Date.now();
+  return {
+    id: globalTool.toolId,
+    name: globalTool.name,
+    url: globalTool.websiteUrl || globalTool.canonicalUrl || '',
+    logoUrl: globalTool.logoUrl || '',
+    summary: globalTool.summary || '',
+    bestUseCases: globalTool.bestUseCases || [],
+    category: globalTool.category || 'Other',
+    tags: globalTool.tags || [],
+    integrations: globalTool.integrations || [],
+    pricingBucket: globalTool.pricingBucket || PricingBucket.UNKNOWN,
+    pricingNotes: globalTool.pricingNotes || '',
+    status: ToolStatus.INTERESTED,
+    notes: { ...EMPTY_NOTES },
+    createdAt: now,
+    updatedAt: now,
+  };
+};
 
 const getStatusStyles = (status?: ToolStatus) => {
   switch (status) {
@@ -872,14 +896,16 @@ const ToolDetail = ({
   onUpdate,
   onRequestDelete,
   categories,
-  isAdmin
+  isAdmin,
+  onAddToCatalog
 }: { 
   tool: Tool, 
   onClose: () => void, 
   onUpdate: (t: Tool) => void, 
   onRequestDelete: (id: string) => void,
   categories: string[],
-  isAdmin: boolean
+  isAdmin: boolean,
+  onAddToCatalog: (toolId: string) => void
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [adminMode, setAdminMode] = useState(false);
@@ -1305,6 +1331,16 @@ const ToolDetail = ({
                  {advancedMode ? 'Advanced Edit On' : 'Advanced Edit'}
                </button>
              )}
+             {isAdmin && (
+               <button
+                 type="button"
+                 onClick={() => onAddToCatalog(editedTool.id)}
+                 className="self-start text-[11px] uppercase tracking-[0.2em] text-secondary hover:text-white transition-colors flex items-center gap-2"
+               >
+                 <BookOpen size={14} className="text-secondary" />
+                 Add To Catalog
+               </button>
+             )}
           </div>
           <div className="text-xs text-gray-700 mt-10 text-center font-mono uppercase tracking-widest opacity-50">
             Added on {new Date(editedTool.createdAt).toLocaleDateString()}
@@ -1395,6 +1431,8 @@ export default function Page() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [catalogTools, setCatalogTools] = useState<GlobalTool[]>([]);
+  const [catalogLoading, setCatalogLoading] = useState(false);
   
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [toolToDelete, setToolToDelete] = useState<Tool | null>(null);
@@ -1499,6 +1537,50 @@ export default function Page() {
     setIsOnboardingOpen(false);
     setIsCatalogOpen(true);
   };
+
+  const loadCatalog = async () => {
+    if (!user) return;
+    setCatalogLoading(true);
+    try {
+      const entries = await fetchCatalogEntries();
+      const toolIds = entries.map((entry) => entry.toolId).filter(Boolean);
+      const globalMap = await fetchGlobalTools(toolIds);
+      const tools = toolIds
+        .map((toolId) => globalMap.get(toolId))
+        .filter((tool): tool is GlobalTool => Boolean(tool));
+      setCatalogTools(tools);
+    } catch (error) {
+      console.error('Failed to load catalog', error);
+    } finally {
+      setCatalogLoading(false);
+    }
+  };
+
+  const handleAddCatalogTool = async (globalTool: GlobalTool) => {
+    if (!user) return;
+    try {
+      const tool = globalToTool(globalTool);
+      await addUserToolToFirestore(user.uid, tool);
+    } catch (error) {
+      console.error('Failed to add catalog tool', error);
+      alert('Failed to add tool to your vault.');
+    }
+  };
+
+  const handleAddToCatalog = async (toolId: string) => {
+    try {
+      await addToolToCatalog(toolId);
+      alert('Added to Tool Catalog.');
+    } catch (error: any) {
+      alert(error?.message || 'Failed to add tool to catalog.');
+    }
+  };
+
+  useEffect(() => {
+    if (isCatalogOpen && user) {
+      loadCatalog();
+    }
+  }, [isCatalogOpen, user]);
 
   const resolveToolForCloud = async (tool: Tool) => {
     const inputValue = tool.url || tool.name;
@@ -1880,22 +1962,22 @@ export default function Page() {
                   <h2 className="text-2xl md:text-3xl font-bold text-white">How you'll use Tool Vault</h2>
                   <div className="space-y-4 text-sm text-gray-300">
                     <div className="flex items-start gap-3">
-                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-black border border-border text-secondary">
-                        <Plus size={16} />
+                      <span className="flex items-center justify-center w-7 h-7 rounded-full bg-black border border-border text-secondary mt-0.5">
+                        <Plus size={14} />
                       </span>
-                      <div>Add a tool ? Paste a name or URL and let Tool Vault fill the basics</div>
+                      <div><span className="text-white font-semibold">Add a tool:</span> Paste a name or URL and let Tool Vault fill the basics</div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-black border border-border text-secondary">
-                        <PenTool size={16} />
+                      <span className="flex items-center justify-center w-7 h-7 rounded-full bg-black border border-border text-secondary mt-0.5">
+                        <PenTool size={14} />
                       </span>
-                      <div>Edit it ? Add your personal notes, tags, and status</div>
+                      <div><span className="text-white font-semibold">Edit it:</span> Add your personal notes, tags, and status</div>
                     </div>
                     <div className="flex items-start gap-3">
-                      <span className="flex items-center justify-center w-8 h-8 rounded-full bg-black border border-border text-secondary">
-                        <Trash2 size={16} />
+                      <span className="flex items-center justify-center w-7 h-7 rounded-full bg-black border border-border text-secondary mt-0.5">
+                        <Trash2 size={14} />
                       </span>
-                      <div>Remove it ? Delete tools anytime (your vault, your rules)</div>
+                      <div><span className="text-white font-semibold">Remove it:</span> Delete tools anytime (your vault, your rules)</div>
                     </div>
                   </div>
                   <div className="flex items-center justify-between">
@@ -1942,19 +2024,48 @@ export default function Page() {
 
       {isCatalogOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
-          <div className="bg-surface border border-border rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl p-6">
-            <div className="flex items-center justify-between">
+          <div className="bg-surface border border-border rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-border">
               <div className="flex items-center gap-2 text-white font-bold"><BookOpen size={18} /> Tool Catalog</div>
               <button onClick={() => setIsCatalogOpen(false)} className="text-secondary hover:text-white"><X size={18} /></button>
             </div>
-            <p className="text-sm text-secondary mt-4">You can browse the Tool Catalog anytime to add tools to your vault.</p>
-            <div className="flex justify-end mt-6">
-              <button
-                onClick={() => setIsCatalogOpen(false)}
-                className="px-4 py-2 rounded-full bg-primary text-white text-sm font-bold hover:bg-primaryHover transition-colors"
-              >
-                OK
-              </button>
+            <div className="p-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              {!user && (
+                <div className="text-sm text-secondary">Sign in to browse and add tools from the catalog.</div>
+              )}
+              {user && catalogLoading && (
+                <div className="text-sm text-secondary">Loading catalog...</div>
+              )}
+              {user && !catalogLoading && catalogTools.length === 0 && (
+                <div className="text-sm text-secondary">No tools in the catalog yet.</div>
+              )}
+              {user && !catalogLoading && catalogTools.length > 0 && (
+                <div className="space-y-3">
+                  {catalogTools.map((tool) => (
+                    <div key={tool.toolId} className="flex items-start justify-between gap-4 p-4 rounded-xl bg-black border border-border">
+                      <div className="min-w-0">
+                        <div className="text-white font-semibold">{tool.name}</div>
+                        <div className="text-xs text-secondary mt-1">{tool.summary}</div>
+                        {tool.tags && tool.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {tool.tags.slice(0, 6).map((tag) => (
+                              <span key={tag} className="px-2 py-0.5 rounded-full bg-surface border border-border text-[10px] text-secondary">
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => handleAddCatalogTool(tool)}
+                        className="shrink-0 px-4 py-2 rounded-full bg-primary text-white text-xs font-bold hover:bg-primaryHover transition-colors"
+                      >
+                        Add to Vault
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1967,6 +2078,7 @@ export default function Page() {
           onRequestDelete={(id) => setToolToDelete(tools.find(t => t.id === id) || null)}
           categories={categories}
           isAdmin={isAdmin}
+          onAddToCatalog={handleAddToCatalog}
         />
       )}
     </div>

@@ -12,7 +12,7 @@ import {
   documentId,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Tool, UserTool, GlobalTool } from '../types';
+import { Tool, UserTool, GlobalTool, ToolCatalogEntry } from '../types';
 
 const STORAGE_KEY = 'tool_vault_v1';
 
@@ -169,6 +169,15 @@ export const subscribeToUserTools = (
       console.error('Firestore subscription error:', error);
     }
   );
+};
+
+
+export const fetchCatalogEntries = async () => {
+  if (!db) return [] as ToolCatalogEntry[];
+  const firestore = db;
+  const q = query(collection(firestore, 'tools_catalog'), orderBy('addedAt', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map((docSnap) => docSnap.data() as ToolCatalogEntry);
 };
 
 export const fetchGlobalTools = async (toolIds: string[]) => {

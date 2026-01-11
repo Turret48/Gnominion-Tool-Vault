@@ -110,6 +110,11 @@ export interface GlobalTool {
   aliases: string[];
 }
 
+
+export interface ToolCatalogEntry {
+  toolId: string;
+}
+
 export interface UserTool {
   toolId: string;
   status: ToolStatus;
