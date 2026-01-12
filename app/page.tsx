@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Search, Plus, X, LayoutGrid, List as ListIcon, Database, ArrowUpRight, Hash, Tag, 
   Check, Save, Trash2, Download, Upload, Cpu, Zap, PenTool, Mail, BarChart2, AlertTriangle, Menu,
@@ -114,7 +114,12 @@ const ToolIcon = ({ url, websiteUrl, name, className = "" }: { url?: string, web
     } else if (websiteUrl) {
       try {
         const domain = new URL(websiteUrl).hostname;
-        setImgSrc(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
+        const logoToken = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+        if (logoToken) {
+          setImgSrc(`https://img.logo.dev/${domain}?token=${logoToken}`);
+        } else {
+          setImgSrc(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
+        }
       } catch {
         setImgSrc(null);
       }
@@ -127,10 +132,22 @@ const ToolIcon = ({ url, websiteUrl, name, className = "" }: { url?: string, web
     if (imgSrc === url && websiteUrl && !isError) {
        try {
         const domain = new URL(websiteUrl).hostname;
+        const logoToken = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+        if (logoToken) {
+          setImgSrc(`https://img.logo.dev/${domain}?token=${logoToken}`);
+          return;
+        }
         setImgSrc(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
        } catch {
         setIsError(true);
        }
+    } else if (websiteUrl && !isError) {
+      try {
+        const domain = new URL(websiteUrl).hostname;
+        setImgSrc(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
+      } catch {
+        setIsError(true);
+      }
     } else {
       setIsError(true);
     }
@@ -138,12 +155,15 @@ const ToolIcon = ({ url, websiteUrl, name, className = "" }: { url?: string, web
 
   if (imgSrc && !isError) {
     return (
-      <img 
-        src={imgSrc} 
-        alt={`${name} logo`} 
-        className={`object-cover w-full h-full ${className}`} 
-        onError={handleError} 
-      />
+      <>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img 
+          src={imgSrc} 
+          alt={`${name} logo`} 
+          className={`object-cover w-full h-full ${className}`} 
+          onError={handleError} 
+        />
+      </>
     );
   }
 
@@ -268,7 +288,10 @@ const Sidebar = ({
                 )}
                <div className="flex items-center gap-3 p-2 rounded-lg bg-surface border border-border/50 mb-3">
                  {user.photoURL ? (
-                   <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-border" />
+                   <>
+                     {/* eslint-disable-next-line @next/next/no-img-element */}
+                     <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-border" />
+                   </>
                  ) : (
                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
                      <UserIcon size={14} />
@@ -705,7 +728,7 @@ const AddToolModal = ({
                 <Plus size={32} className="text-primary" />
               </div>
               <p className="text-center text-secondary max-w-md font-light">
-                Enter a URL or tool name. I'll search for details and set up the card for you.
+                Enter a URL or tool name. I&apos;ll search for details and set up the card for you.
               </p>
               <form onSubmit={handleChatSubmit} className="w-full max-w-md relative group">
                 <input
@@ -911,6 +934,8 @@ const ToolDetail = ({
   const [adminMode, setAdminMode] = useState(false);
   const [advancedMode, setAdvancedMode] = useState(false);
   const [noteDrafts, setNoteDrafts] = useState(EMPTY_NOTES);
+  const [showLogoPreview, setShowLogoPreview] = useState(false);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [editedTool, setEditedTool] = useState<Tool>(tool);
   const [newTag, setNewTag] = useState('');
   const [isDirty, setIsDirty] = useState(false);
@@ -948,7 +973,7 @@ const ToolDetail = ({
     if (isEditing) {
       setNoteDrafts({ ...EMPTY_NOTES, ...(editedTool.notes || {}) });
     }
-  }, [isEditing]);
+  }, [isEditing, editedTool.notes]);
 
 
   const updateEditedTool = (updater: (prev: Tool) => Tool) => {
@@ -965,6 +990,33 @@ const ToolDetail = ({
       [field]: value
     }));
     setIsDirty(true);
+  };
+
+  const getLogoDevUrl = (websiteUrl: string) => {
+    try {
+      const token = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
+      if (!token) return null;
+      const domain = new URL(websiteUrl).hostname;
+      return `https://img.logo.dev/${domain}?token=${token}`;
+    } catch {
+      return null;
+    }
+  };
+
+  const openLogoPreview = () => {
+    const url = getLogoDevUrl(editedTool.url);
+    if (!url) {
+      alert('Logo.dev token or valid website URL is missing.');
+      return;
+    }
+    setLogoPreviewUrl(url);
+    setShowLogoPreview(true);
+  };
+
+  const applyLogoPreview = () => {
+    if (!logoPreviewUrl) return;
+    setField('logoUrl', logoPreviewUrl);
+    setShowLogoPreview(false);
   };
 
   const setField = (field: keyof Tool, value: any, overrideKey?: string) => {
@@ -1215,6 +1267,27 @@ const ToolDetail = ({
                       </a>
                    )}
                 </div>
+                {isAdmin && canEditAdvanced && (
+                  <div className="mt-4">
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Logo URL</label>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        className="w-full bg-black border border-border rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                        value={editedTool.logoUrl || ''}
+                        onChange={(e) => setField('logoUrl', e.target.value)}
+                        placeholder="https://..."
+                      />
+                      <button
+                        type="button"
+                        onClick={openLogoPreview}
+                        className="self-start text-[11px] uppercase tracking-[0.2em] text-secondary hover:text-white transition-colors flex items-center gap-2"
+                      >
+                        <BookOpen size={14} className="text-secondary" />
+                        Preview Logo.dev
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             {canEditAdvanced ? (
@@ -1347,6 +1420,36 @@ const ToolDetail = ({
           </div>
         </div>
       </div>
+
+      {showLogoPreview && logoPreviewUrl && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm pointer-events-auto">
+          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
+            <h3 className="text-lg font-bold text-white">Logo.dev Preview</h3>
+            <p className="text-sm text-secondary mt-2">Use this logo for all users?</p>
+            <div className="mt-4 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-xl bg-black border border-border overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={logoPreviewUrl} alt="Logo preview" className="w-full h-full object-cover" />
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                onClick={() => setShowLogoPreview(false)}
+                className="px-4 py-2 rounded-full bg-surface border border-border text-white text-sm font-medium hover:bg-surfaceHover"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={applyLogoPreview}
+                className="px-4 py-2 rounded-full bg-primary text-white text-sm font-bold hover:bg-primaryHover"
+              >
+                Save for All Users
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showUnsavedPrompt && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm pointer-events-auto">
           <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
@@ -1575,7 +1678,7 @@ export default function Page() {
     setIsCatalogOpen(true);
   };
 
-  const loadCatalog = async () => {
+  const loadCatalog = useCallback(async () => {
     if (!user) return;
     setCatalogLoading(true);
     try {
@@ -1591,7 +1694,7 @@ export default function Page() {
     } finally {
       setCatalogLoading(false);
     }
-  };
+  }, [user]);
 
   const handleAddCatalogTool = async (globalTool: GlobalTool) => {
     if (!user) return;
@@ -1623,7 +1726,7 @@ export default function Page() {
     if (isCatalogOpen && user) {
       loadCatalog();
     }
-  }, [isCatalogOpen, user]);
+  }, [isCatalogOpen, user, loadCatalog]);
 
   const resolveToolForCloud = async (tool: Tool) => {
     const inputValue = tool.url || tool.name;
@@ -2017,7 +2120,7 @@ export default function Page() {
 
               {onboardingStep === 1 && (
                 <div className="space-y-6">
-                  <h2 className="text-2xl md:text-3xl font-bold text-white">How you'll use Tool Vault</h2>
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">How you&apos;ll use Tool Vault</h2>
                   <div className="space-y-4 text-sm text-gray-300">
                     <div className="flex items-start gap-3">
                       <span className="flex items-center justify-center w-7 h-7 rounded-full bg-black border border-border text-secondary mt-0.5">
