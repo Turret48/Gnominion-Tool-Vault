@@ -105,10 +105,10 @@ const getStatusStyles = (status?: ToolStatus) => {
 
 
 const LOGO_OVERRIDES: Record<string, string> = {
-  'firebase.google.com': 'https://cdn.simpleicons.org/firebase/ffffff',
-  'analytics.google.com': 'https://cdn.simpleicons.org/googleanalytics/ffffff',
-  'lookerstudio.google.com': 'https://cdn.simpleicons.org/looker/ffffff',
-  'aistudio.google.com': 'https://cdn.simpleicons.org/googlegemini/ffffff',
+  'firebase.google.com': 'https://cdn.simpleicons.org/firebase',
+  'analytics.google.com': 'https://cdn.simpleicons.org/googleanalytics',
+  'lookerstudio.google.com': 'https://cdn.simpleicons.org/looker',
+  'aistudio.google.com': 'https://cdn.simpleicons.org/googlegemini',
 };
 
 const getLogoOverride = (hostname: string) => {
@@ -2117,9 +2117,9 @@ export default function Page() {
       )}
 
 
-        <div className="mt-10 text-[11px] text-secondary text-center">
-          <a href="https://logo.dev">Logos provided by Logo.dev</a>
-        </div>
+      <div className="px-4 md:px-8 pb-6 text-[11px] text-secondary text-center">
+        <a href="https://logo.dev">Logos provided by Logo.dev</a>
+      </div>
 
       {isOnboardingOpen && user && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
