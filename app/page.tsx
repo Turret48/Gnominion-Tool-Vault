@@ -103,6 +103,20 @@ const getStatusStyles = (status?: ToolStatus) => {
   }
 };
 
+
+const LOGO_OVERRIDES: Record<string, string> = {
+  'firebase.google.com': 'https://cdn.simpleicons.org/firebase/ffffff',
+  'analytics.google.com': 'https://cdn.simpleicons.org/googleanalytics/ffffff',
+  'lookerstudio.google.com': 'https://cdn.simpleicons.org/looker/ffffff',
+  'aistudio.google.com': 'https://cdn.simpleicons.org/googlegemini/ffffff',
+};
+
+const getLogoOverride = (hostname: string) => {
+  const lower = hostname.toLowerCase();
+  if (LOGO_OVERRIDES[lower]) return LOGO_OVERRIDES[lower];
+  return null;
+};
+
 const ToolIcon = ({ url, websiteUrl, name, className = "" }: { url?: string, websiteUrl?: string, name: string, className?: string }) => {
   const [imgSrc, setImgSrc] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
@@ -114,6 +128,11 @@ const ToolIcon = ({ url, websiteUrl, name, className = "" }: { url?: string, web
     } else if (websiteUrl) {
       try {
         const domain = new URL(websiteUrl).hostname;
+        const override = getLogoOverride(domain);
+        if (override) {
+          setImgSrc(override);
+          return;
+        }
         const logoToken = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
         if (logoToken) {
           setImgSrc(`https://img.logo.dev/${domain}?token=${logoToken}`);
@@ -132,6 +151,11 @@ const ToolIcon = ({ url, websiteUrl, name, className = "" }: { url?: string, web
     if (imgSrc === url && websiteUrl && !isError) {
        try {
         const domain = new URL(websiteUrl).hostname;
+        const override = getLogoOverride(domain);
+        if (override) {
+          setImgSrc(override);
+          return;
+        }
         const logoToken = process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN;
         if (logoToken) {
           setImgSrc(`https://img.logo.dev/${domain}?token=${logoToken}`);
@@ -144,6 +168,11 @@ const ToolIcon = ({ url, websiteUrl, name, className = "" }: { url?: string, web
     } else if (websiteUrl && !isError) {
       try {
         const domain = new URL(websiteUrl).hostname;
+        const override = getLogoOverride(domain);
+        if (override) {
+          setImgSrc(override);
+          return;
+        }
         setImgSrc(`https://www.google.com/s2/favicons?domain=${domain}&sz=128`);
       } catch {
         setIsError(true);
@@ -2087,6 +2116,10 @@ export default function Page() {
         </div>
       )}
 
+
+        <div className="mt-10 text-[11px] text-secondary text-center">
+          <a href="https://logo.dev">Logos provided by Logo.dev</a>
+        </div>
 
       {isOnboardingOpen && user && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
