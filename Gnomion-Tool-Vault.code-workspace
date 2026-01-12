@@ -1,10 +1,10 @@
-{
+﻿{
 	"folders": [
 		{
-			"uri": "vscode-vfs://github/Turret48/Gnomion-Tool-Vault"
+			"uri": "vscode-vfs://github/Turret48/Gnominion-Tool-Vault"
 		},
 		{
-			"name": "Gnomion-Tool-Vault",
+			"name": "Gnominion-Tool-Vault",
 			"path": "."
 		}
 	],

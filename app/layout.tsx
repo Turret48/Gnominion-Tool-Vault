@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import React from "react";
 import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
@@ -6,6 +6,11 @@ import { AuthProvider } from "../context/AuthContext";
 export const metadata: Metadata = {
   title: "Tool Vault",
   description: "A private, calm knowledge base for tracking and learning software tools.",
+  icons: {
+    icon: '/gnometoolvault.png',
+    shortcut: '/gnometoolvault.png',
+    apple: '/gnometoolvault.png'
+  }
 };
 
 export default function RootLayout({
