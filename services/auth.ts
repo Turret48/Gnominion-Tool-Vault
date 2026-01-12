@@ -1,10 +1,12 @@
-import { 
+﻿import { 
   GoogleAuthProvider, 
   signInWithPopup, 
   signOut, 
-  User 
+  User,
+  signInWithCustomToken
 } from "firebase/auth";
 import { auth } from "./firebase";
+import { getAuth0Client } from "./auth0Client";
 
 const googleProvider = new GoogleAuthProvider();
 // Force account selection to prevent "popup closed immediately" errors
@@ -12,17 +14,109 @@ googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
 
-export const signInWithGoogle = async (): Promise<User> => {
+const requireFirebaseAuth = () => {
   if (!auth) {
     throw new Error("Authentication service is not configured (missing Firebase keys).");
   }
+  return auth;
+};
+
+const getAuth0Config = () => {
+  const domain = process.env.NEXT_PUBLIC_AUTH0_DOMAIN;
+  const clientId = process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID;
+  if (!domain || !clientId) return null;
+  return { domain, clientId };
+};
+
+const hasAuth0RedirectParams = () => {
+  if (typeof window === 'undefined') return false;
+  const search = window.location.search;
+  return search.includes('code=') && search.includes('state=');
+};
+
+export const signInWithGoogle = async (): Promise<User> => {
+  const firebaseAuth = requireFirebaseAuth();
   try {
-    const result = await signInWithPopup(auth, googleProvider);
+    const result = await signInWithPopup(firebaseAuth, googleProvider);
     return result.user;
   } catch (error) {
     console.error("Error signing in with Google", error);
     throw error;
   }
+};
+
+export const signInWithAuth0 = async () => {
+  const auth0 = await getAuth0Client();
+  if (!auth0) {
+    throw new Error('Auth0 is not configured.');
+  }
+
+  await auth0.loginWithRedirect({
+    authorizationParams: {
+      redirect_uri: window.location.origin,
+    }
+  });
+};
+
+export const handleAuth0Redirect = async (): Promise<User | null> => {
+  if (!auth || !hasAuth0RedirectParams()) return null;
+
+  const auth0 = await getAuth0Client();
+  if (!auth0) return null;
+
+  await auth0.handleRedirectCallback();
+
+  const claims = await auth0.getIdTokenClaims();
+  const idToken = claims?.__raw;
+  if (!idToken) {
+    throw new Error('Missing Auth0 ID token.');
+  }
+
+  const response = await fetch('/api/auth/firebase', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ idToken })
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || 'Failed to exchange Auth0 token.');
+  }
+
+  const data = await response.json();
+  if (!data.firebaseToken) {
+    throw new Error('Missing Firebase token.');
+  }
+
+  const firebaseAuth = requireFirebaseAuth();
+  await signInWithCustomToken(firebaseAuth, data.firebaseToken);
+
+  window.history.replaceState({}, document.title, window.location.pathname);
+  return firebaseAuth.currentUser;
+};
+
+export const requestPasswordReset = async (email: string) => {
+  const config = getAuth0Config();
+  if (!config) {
+    throw new Error('Auth0 is not configured.');
+  }
+
+  const response = await fetch(`https://${config.domain}/dbconnections/change_password`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      client_id: config.clientId,
+      email,
+      connection: 'Username-Password-Authentication'
+    })
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(text || 'Failed to request password reset.');
+  }
+
+  return response.text();
 };
 
 export const logOut = async () => {
@@ -32,5 +126,16 @@ export const logOut = async () => {
   } catch (error) {
     console.error("Error signing out", error);
     throw error;
+  }
+
+  const auth0 = await getAuth0Client();
+  if (auth0) {
+    try {
+      await auth0.logout({
+        logoutParams: { returnTo: window.location.origin }
+      });
+    } catch (error) {
+      console.error('Error signing out of Auth0', error);
+    }
   }
 };

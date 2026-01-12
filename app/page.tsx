@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
@@ -24,7 +24,7 @@ import {
 } from '../services/storageService';
 import { enrichToolData } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
-import { signInWithGoogle, logOut } from '../services/auth';
+import { signInWithGoogle, signInWithAuth0, requestPasswordReset, logOut } from '../services/auth';
 import { updateGlobalTool } from '../services/globalToolService';
 import { addToolToCatalog } from '../services/catalogService';
 
@@ -386,11 +386,16 @@ const LoginModal = ({
   onClose: () => void 
 }) => {
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(false);
+  const [auth0Loading, setAuth0Loading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [email, setEmail] = useState('');
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     setError('');
+    setNotice('');
     try {
       await signInWithGoogle();
       onClose();
@@ -417,7 +422,42 @@ const LoginModal = ({
     }
   };
 
+  const handleAuth0Login = async () => {
+    setAuth0Loading(true);
+    setError('');
+    setNotice('');
+    try {
+      await signInWithAuth0();
+    } catch (err: any) {
+      console.error("Auth0 Login Error:", err);
+      setError(err?.message || 'Failed to sign in with email.');
+      setAuth0Loading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (!email.trim()) {
+      setError('Enter your email to reset your password.');
+      return;
+    }
+
+    setResetLoading(true);
+    setError('');
+    setNotice('');
+    try {
+      await requestPasswordReset(email.trim());
+      setNotice('Password reset email sent if the account exists.');
+    } catch (err: any) {
+      console.error("Password Reset Error:", err);
+      setError(err?.message || 'Failed to request password reset.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   if (!isOpen) return null;
+
+  const disableButtons = loading || auth0Loading || resetLoading;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
@@ -440,10 +480,16 @@ const LoginModal = ({
               {error}
             </div>
           )}
+
+          {notice && (
+            <div className="w-full mb-4 p-3 bg-emerald-900/20 border border-emerald-900/50 rounded-lg text-emerald-200 text-xs">
+              {notice}
+            </div>
+          )}
           
           <button 
             onClick={handleGoogleLogin}
-            disabled={loading}
+            disabled={disableButtons}
             className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full bg-white text-black font-bold hover:bg-gray-100 transition-colors shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
           >
              {loading ? (
@@ -471,6 +517,49 @@ const LoginModal = ({
             <span>Sign in with Google</span>
           </button>
 
+          <div className="mt-6 w-full">
+            <div className="flex items-center gap-3 text-[11px] text-gray-500">
+              <span className="h-px flex-1 bg-border"></span>
+              <span>or</span>
+              <span className="h-px flex-1 bg-border"></span>
+            </div>
+
+            <div className="mt-5 w-full space-y-3 text-left">
+              <button
+                onClick={handleAuth0Login}
+                disabled={disableButtons}
+                className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full bg-surfaceHover border border-border text-white font-semibold hover:border-primary/60 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {auth0Loading ? (
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                ) : (
+                  <UserIcon size={18} />
+                )}
+                <span>Sign in with Email</span>
+              </button>
+
+              <div>
+                <label className="block text-[11px] uppercase tracking-widest text-gray-500 mb-2">Email</label>
+                <input
+                  type="email"
+                  name="auth0-email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-primary/60"
+                />
+              </div>
+
+              <button
+                onClick={handlePasswordReset}
+                disabled={disableButtons}
+                className="w-full text-xs font-semibold text-primary hover:text-white transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {resetLoading ? 'Sending reset email...' : 'Send Password Reset'}
+              </button>
+            </div>
+          </div>
+
           <button 
             onClick={onClose}
             className="mt-6 text-xs text-secondary hover:text-white transition-colors"
@@ -482,7 +571,6 @@ const LoginModal = ({
     </div>
   );
 };
-
 const SettingsModal = ({
   isOpen,
   onClose,
@@ -2117,7 +2205,7 @@ export default function Page() {
       )}
 
 
-      <div className="px-4 md:px-8 pb-6 text-[11px] text-secondary text-center">
+      <div className="fixed bottom-3 right-4 z-20 text-[11px] text-secondary">
         <a href="https://logo.dev">Logos provided by Logo.dev</a>
       </div>
 
@@ -2316,3 +2404,4 @@ export default function Page() {
     </div>
   );
 }
+

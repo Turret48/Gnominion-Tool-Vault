@@ -1,8 +1,9 @@
-'use client';
+﻿'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase';
+import { handleAuth0Redirect } from '../services/auth';
 
 interface AuthContextType {
   user: User | null;
@@ -16,17 +17,37 @@ export const AuthProvider = ({ children }: { children?: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!auth) {
-      // If firebase isn't initialized, we are just in local mode forever.
-      setLoading(false);
-      return;
-    }
+    let isMounted = true;
+    let unsubscribe: (() => void) | null = null;
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-    return () => unsubscribe();
+    const init = async () => {
+      if (!auth) {
+        // If firebase isn't initialized, we are just in local mode forever.
+        if (isMounted) {
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        await handleAuth0Redirect();
+      } catch (error) {
+        console.error('Auth0 redirect handling failed.', error);
+      }
+
+      unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        if (!isMounted) return;
+        setUser(currentUser);
+        setLoading(false);
+      });
+    };
+
+    init();
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   return (
