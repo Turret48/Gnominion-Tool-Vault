@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   title: "Tool Vault",
   description: "A private, calm knowledge base for tracking and learning software tools.",
   icons: {
-    icon: '/gnometoolvault.png',
-    shortcut: '/gnometoolvault.png',
-    apple: '/gnometoolvault.png'
+    icon: 'https://gnominion-tool-vault.vercel.app/toolvaultlogo.png',
+    shortcut: 'https://gnominion-tool-vault.vercel.app/toolvaultlogo.png',
+    apple: 'https://gnominion-tool-vault.vercel.app/toolvaultlogo.png'
   }
 };
 
@@ -28,3 +28,4 @@ export default function RootLayout({
     </html>
   );
 }
+
