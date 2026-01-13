@@ -4,14 +4,11 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { 
   Search, Plus, X, LayoutGrid, List as ListIcon, Database, ArrowUpRight, Hash, Tag, 
   Check, Save, Trash2, Download, Upload, Cpu, Zap, PenTool, Mail, BarChart2, AlertTriangle, Menu,
-  Settings, LogIn, LogOut, User as UserIcon, RefreshCw, Activity, BookOpen
+  Settings, LogOut, User as UserIcon, BookOpen
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Tool, UserTool, GlobalTool, PricingBucket, ToolStatus, DEFAULT_CATEGORIES } from '../types';
 import {
-  loadTools,
-  saveTools,
-  clearLocalTools,
   exportData,
   subscribeToUserTools,
   subscribeToCategories,
@@ -24,7 +21,7 @@ import {
 } from '../services/storageService';
 import { enrichToolData } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
-import { signInWithGoogle, signInWithAuth0, logOut } from '../services/auth';
+import { signInWithAuth0, logOut } from '../services/auth';
 import { updateGlobalTool } from '../services/globalToolService';
 import { addToolToCatalog } from '../services/catalogService';
 
@@ -212,10 +209,7 @@ const Sidebar = ({
   onImport,
   isOpen,
   onClose,
-  onOpenSettings,
-  onOpenLogin,
-  localToolCount,
-  onSyncLocal
+  onOpenSettings
 }: { 
   categories: string[], 
   activeCategory: string, 
@@ -224,10 +218,7 @@ const Sidebar = ({
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void,
   isOpen: boolean,
   onClose: () => void,
-  onOpenSettings: () => void,
-  onOpenLogin: () => void,
-  localToolCount: number,
-  onSyncLocal: () => void
+  onOpenSettings: () => void
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
@@ -306,16 +297,6 @@ const Sidebar = ({
         <div className="p-4 border-t border-border bg-black/50">
            {user ? (
              <>
-                {localToolCount > 0 && (
-                   <button
-                     onClick={onSyncLocal}
-                     className="w-full flex items-center justify-center gap-2 mb-3 px-3 py-3 rounded-lg bg-indigo-900/30 border border-indigo-500/30 text-xs font-bold text-indigo-300 hover:bg-indigo-900/50 transition-all group"
-                     title="Upload local tools to account"
-                   >
-                     <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-500" /> 
-                     Sync {localToolCount} Local Tools
-                   </button>
-                )}
                <div className="flex items-center gap-3 p-2 rounded-lg bg-surface border border-border/50 mb-3">
                  {user.photoURL ? (
                    <>
@@ -340,14 +321,7 @@ const Sidebar = ({
                  </button>
                </div>
              </>
-           ) : (
-             <button
-               onClick={onOpenLogin}
-               className="w-full flex items-center justify-center gap-2 mb-3 px-3 py-3 rounded-lg bg-surfaceHover border border-primary/20 text-xs font-bold text-primary hover:bg-primary/10 transition-all"
-             >
-               <LogIn size={14} /> Sign In to Sync
-             </button>
-           )}
+           ) : null}
 
           <div className="flex gap-2">
              <button 
@@ -380,55 +354,26 @@ const Sidebar = ({
 
 // 2. Login Modal
 const LoginModal = ({ 
-  isOpen, 
-  onClose 
+  isOpen
 }: { 
-  isOpen: boolean, 
-  onClose: () => void 
+  isOpen: boolean
 }) => {
-  const [error, setError] = useState('');  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [auth0Loading, setAuth0Loading] = useState(false);
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    setError('');    try {
-      await signInWithGoogle();
-      onClose();
-    } catch (err: any) {
-      console.error("Login Error:", err);
-      
-      let msg = 'Failed to sign in.';
-      // Handle common Firebase Auth errors
-      if (err.code === 'auth/popup-closed-by-user') {
-        msg = 'Sign-in window was closed.';
-      } else if (err.code === 'auth/cancelled-popup-request') {
-        msg = 'Multiple popup requests cancelled.';
-      } else if (err.code === 'auth/operation-not-allowed') {
-        msg = 'Google Sign-In disabled in Firebase Console.';
-      } else if (err.code === 'auth/unauthorized-domain') {
-        msg = 'Domain not authorized in Firebase Console (Auth > Settings).';
-      } else if (err.message) {
-        msg = err.message;
-      }
-      
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleAuth0Login = async () => {
     setAuth0Loading(true);
-    setError('');    try {
+    setError('');
+    try {
       await signInWithAuth0();
     } catch (err: any) {
       console.error("Auth0 Login Error:", err);
-      setError(err?.message || 'Failed to sign in with email.');
+      setError(err?.message || 'Failed to sign in.');
       setAuth0Loading(false);
     }
   };
-  if (!isOpen) return null;
 
-  const disableButtons = loading || auth0Loading;
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
@@ -451,64 +396,19 @@ const LoginModal = ({
             <div className="w-full mb-4 p-3 bg-red-900/20 border border-red-900/50 rounded-lg text-red-200 text-xs">
               {error}
             </div>
-          )}          
+          )}
+
           <button 
-            onClick={handleGoogleLogin}
-            disabled={disableButtons}
+            onClick={handleAuth0Login}
+            disabled={auth0Loading}
             className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full bg-white text-black font-bold hover:bg-gray-100 transition-colors shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
           >
-             {loading ? (
+             {auth0Loading ? (
                 <div className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin"></div>
              ) : (
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26.81-.58z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
-                </svg>
+                <UserIcon size={18} />
              )}
-            <span>Sign in with Google</span>
-          </button>
-
-          <div className="mt-6 w-full">
-            <div className="flex items-center gap-3 text-[11px] text-gray-500">
-              <span className="h-px flex-1 bg-border"></span>
-              <span>or</span>
-              <span className="h-px flex-1 bg-border"></span>
-            </div>
-
-            <div className="mt-5 w-full space-y-3 text-left">
-              <button
-                onClick={handleAuth0Login}
-                disabled={disableButtons}
-                className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-full bg-surfaceHover border border-border text-white font-semibold hover:border-primary/60 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {auth0Loading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                ) : (
-                  <UserIcon size={18} />
-                )}
-                <span>Sign in with Email</span>
-              </button></div>
-          </div>
-
-          <button 
-            onClick={onClose}
-            className="mt-6 text-xs text-secondary hover:text-white transition-colors"
-          >
-            Continue in Local Mode
+            <span>Sign in</span>
           </button>
         </div>
       </div>
@@ -1590,9 +1490,7 @@ export default function Page() {
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [catalogTools, setCatalogTools] = useState<GlobalTool[]>([]);
@@ -1602,76 +1500,49 @@ export default function Page() {
   
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [toolToDelete, setToolToDelete] = useState<Tool | null>(null);
-  const [localToolsCount, setLocalToolsCount] = useState(0);
   const [enrichmentNotice, setEnrichmentNotice] = useState<{ title: string; message: string } | null>(null);
 
   const { user, loading } = useAuth();
   const isAdmin = user?.email?.toLowerCase() === 'cloudberrystickers@gmail.com';
 
-  // 1. Initialize & Sync Data (Firestore vs Local)
+  if (loading) {
+    return null;
+  }
+
+  if (!user) {
+    return <LoginModal isOpen />;
+  }
+// 1. Initialize & Sync Data (Firestore)
   useEffect(() => {
+    if (!user) return;
+
     let unsubscribeTools: () => void;
     let unsubscribeCats: () => void;
 
-    if (user) {
-      // --- Cloud Mode ---
-      // Check if there are local tools to sync
-      const local = loadTools();
-      setLocalToolsCount(local.length);
-
-      // Subscribe to Firestore changes
-      unsubscribeTools = subscribeToUserTools(user.uid, async (userTools) => {
-        const toolIds = userTools.map((tool) => tool.toolId);
-        const globalMap = await fetchGlobalTools(toolIds);
-        const merged = userTools.map((tool) =>
-          mergeGlobalAndUser(globalMap.get(tool.toolId), tool)
-        );
-        setTools(merged);
-      });
-      unsubscribeCats = subscribeToCategories(user.uid, (cloudCats) => {
-        if (cloudCats && cloudCats.length > 0) {
-          setCategories(cloudCats);
-        } else {
-          // Initialize user with default categories if they don't have any yet
-          // (Can optionally do this in handleUpdateCategories, but here ensures defaults load)
-          // For now, we just rely on defaults in state if DB is empty
-        }
-      });
-    } else {
-      // --- Local Mode ---
-      const localTools = loadTools();
-      setTools(localTools);
-      setLocalToolsCount(localTools.length);
-      
-      const storedCats = localStorage.getItem('tool_vault_categories');
-      if (storedCats) {
-         try {
-           setCategories(JSON.parse(storedCats));
-         } catch {
-           setCategories(DEFAULT_CATEGORIES);
-         }
+    // Subscribe to Firestore changes
+    unsubscribeTools = subscribeToUserTools(user.uid, async (userTools) => {
+      const toolIds = userTools.map((tool) => tool.toolId);
+      const globalMap = await fetchGlobalTools(toolIds);
+      const merged = userTools.map((tool) =>
+        mergeGlobalAndUser(globalMap.get(tool.toolId), tool)
+      );
+      setTools(merged);
+    });
+    unsubscribeCats = subscribeToCategories(user.uid, (cloudCats) => {
+      if (cloudCats && cloudCats.length > 0) {
+        setCategories(cloudCats);
+      } else {
+        // Initialize user with default categories if they don't have any yet
+        // (Can optionally do this in handleUpdateCategories, but here ensures defaults load)
+        // For now, we just rely on defaults in state if DB is empty
       }
-    }
+    });
 
     return () => {
       if (unsubscribeTools) unsubscribeTools();
       if (unsubscribeCats) unsubscribeCats();
     };
   }, [user]);
-
-  // 2. Persist Local Data (Only if not logged in)
-  useEffect(() => {
-    if (!user) {
-      saveTools(tools);
-      setLocalToolsCount(tools.length);
-    }
-  }, [tools, user]);
-
-  useEffect(() => {
-    if (!user) {
-      localStorage.setItem('tool_vault_categories', JSON.stringify(categories));
-    }
-  }, [categories, user]);
 
   useEffect(() => {
     if (user) {
@@ -1861,34 +1732,6 @@ export default function Page() {
     }
   };
 
-  const handleSyncLocalToCloud = async () => {
-    if (!user) return;
-    const local = loadTools();
-    if (local.length === 0) return;
-
-    if (!confirm(`Upload ${local.length} local tools to your account? This will clear them from this device.`)) {
-      return;
-    }
-
-    try {
-      // Upload one by one to avoid large transaction limits if many tools
-      const existingIds = new Set(tools.map((t) => t.id));
-      await Promise.all(local.map(async (t) => {
-        const resolved = await resolveToolForCloud(t);
-        if (existingIds.has(resolved.id)) return;
-        await addUserToolToFirestore(user.uid, resolved);
-      }));
-      
-      // Clear local storage
-      clearLocalTools();
-      setLocalToolsCount(0);
-      alert("Local tools synced to cloud successfully!");
-    } catch (e) {
-      console.error(e);
-      alert("Failed to sync some tools. Check console.");
-    }
-  };
-
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1956,9 +1799,6 @@ export default function Page() {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenLogin={() => setIsLoginModalOpen(true)}
-        localToolCount={localToolsCount}
-        onSyncLocal={handleSyncLocalToCloud}
       />
 
       <main className="ml-0 lg:ml-64 flex-1 flex flex-col h-screen overflow-hidden">
@@ -2023,13 +1863,9 @@ export default function Page() {
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-1 md:mb-2 tracking-tight">{activeCategory === 'All' ? 'Library' : activeCategory}</h2>
               <div className="flex items-center gap-2">
                 <p className="text-secondary text-xs md:text-sm">{filteredTools.length} tools found</p>
-                {user ? (
-                   <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded border border-primary/20 flex items-center gap-1">
-                     <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Cloud Sync Active
-                   </span>
-                ) : (
-                   <span className="text-[10px] bg-surface text-secondary px-2 py-0.5 rounded border border-border">Local Mode</span>
-                )}
+                <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded border border-primary/20 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Cloud Sync Active
+                </span>
               </div>
             </div>
           </div>
@@ -2113,11 +1949,6 @@ export default function Page() {
         onClose={() => setToolToDelete(null)}
         onConfirm={handleDeleteTool}
         toolName={toolToDelete?.name || 'this tool'}
-      />
-      
-      <LoginModal 
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
       />
 
       {enrichmentNotice && (
@@ -2348,6 +2179,13 @@ export default function Page() {
     </div>
   );
 }
+
+
+
+
+
+
+
 
 
 
