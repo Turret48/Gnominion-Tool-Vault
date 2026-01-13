@@ -21,13 +21,6 @@ const requireFirebaseAuth = () => {
   return auth;
 };
 
-const getAuth0Config = () => {
-  const domain = process.env.NEXT_PUBLIC_AUTH0_DOMAIN;
-  const clientId = process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID;
-  if (!domain || !clientId) return null;
-  return { domain, clientId };
-};
-
 const hasAuth0RedirectParams = () => {
   if (typeof window === 'undefined') return false;
   const search = window.location.search;
@@ -95,30 +88,6 @@ export const handleAuth0Redirect = async (): Promise<User | null> => {
   return firebaseAuth.currentUser;
 };
 
-export const requestPasswordReset = async (email: string) => {
-  const config = getAuth0Config();
-  if (!config) {
-    throw new Error('Auth0 is not configured.');
-  }
-
-  const response = await fetch(`https://${config.domain}/dbconnections/change_password`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      client_id: config.clientId,
-      email,
-      connection: 'Username-Password-Authentication'
-    })
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || 'Failed to request password reset.');
-  }
-
-  return response.text();
-};
-
 export const logOut = async () => {
   if (!auth) return;
   try {
@@ -139,3 +108,4 @@ export const logOut = async () => {
     }
   }
 };
+

@@ -24,7 +24,7 @@ import {
 } from '../services/storageService';
 import { enrichToolData } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
-import { signInWithGoogle, signInWithAuth0, requestPasswordReset, logOut } from '../services/auth';
+import { signInWithGoogle, signInWithAuth0, logOut } from '../services/auth';
 import { updateGlobalTool } from '../services/globalToolService';
 import { addToolToCatalog } from '../services/catalogService';
 
@@ -386,18 +386,11 @@ const LoginModal = ({
   isOpen: boolean, 
   onClose: () => void 
 }) => {
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');  const [loading, setLoading] = useState(false);
   const [auth0Loading, setAuth0Loading] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
-  const [email, setEmail] = useState('');
-
   const handleGoogleLogin = async () => {
     setLoading(true);
-    setError('');
-    setNotice('');
-    try {
+    setError('');    try {
       await signInWithGoogle();
       onClose();
     } catch (err: any) {
@@ -425,9 +418,7 @@ const LoginModal = ({
 
   const handleAuth0Login = async () => {
     setAuth0Loading(true);
-    setError('');
-    setNotice('');
-    try {
+    setError('');    try {
       await signInWithAuth0();
     } catch (err: any) {
       console.error("Auth0 Login Error:", err);
@@ -435,30 +426,9 @@ const LoginModal = ({
       setAuth0Loading(false);
     }
   };
-
-  const handlePasswordReset = async () => {
-    if (!email.trim()) {
-      setError('Enter your email to reset your password.');
-      return;
-    }
-
-    setResetLoading(true);
-    setError('');
-    setNotice('');
-    try {
-      await requestPasswordReset(email.trim());
-      setNotice('Password reset email sent if the account exists.');
-    } catch (err: any) {
-      console.error("Password Reset Error:", err);
-      setError(err?.message || 'Failed to request password reset.');
-    } finally {
-      setResetLoading(false);
-    }
-  };
-
   if (!isOpen) return null;
 
-  const disableButtons = loading || auth0Loading || resetLoading;
+  const disableButtons = loading || auth0Loading;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
@@ -481,14 +451,7 @@ const LoginModal = ({
             <div className="w-full mb-4 p-3 bg-red-900/20 border border-red-900/50 rounded-lg text-red-200 text-xs">
               {error}
             </div>
-          )}
-
-          {notice && (
-            <div className="w-full mb-4 p-3 bg-emerald-900/20 border border-emerald-900/50 rounded-lg text-emerald-200 text-xs">
-              {notice}
-            </div>
-          )}
-          
+          )}          
           <button 
             onClick={handleGoogleLogin}
             disabled={disableButtons}
@@ -538,28 +501,7 @@ const LoginModal = ({
                   <UserIcon size={18} />
                 )}
                 <span>Sign in with Email</span>
-              </button>
-
-              <div>
-                <label className="block text-[11px] uppercase tracking-widest text-gray-500 mb-2">Email</label>
-                <input
-                  type="email"
-                  name="auth0-email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@example.com"
-                  className="w-full bg-black/40 border border-border rounded-lg px-3 py-2 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-primary/60"
-                />
-              </div>
-
-              <button
-                onClick={handlePasswordReset}
-                disabled={disableButtons}
-                className="w-full text-xs font-semibold text-primary hover:text-white transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {resetLoading ? 'Sending reset email...' : 'Send Password Reset'}
-              </button>
-            </div>
+              </button></div>
           </div>
 
           <button 
@@ -2406,6 +2348,7 @@ export default function Page() {
     </div>
   );
 }
+
 
 
 

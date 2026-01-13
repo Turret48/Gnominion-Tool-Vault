@@ -62,8 +62,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid Auth0 subject.' }, { status: 400 });
     }
 
+    let firebaseUid = payload.sub;
+    if (typeof payload.email === 'string' && payload.email.length > 0) {
+      try {
+        const existing = await adminAuth.getUserByEmail(payload.email);
+        firebaseUid = existing.uid;
+      } catch (lookupError: any) {
+        if (lookupError?.code !== 'auth/user-not-found') {
+          console.warn('Auth0 email lookup failed.', lookupError);
+        }
+      }
+    }
+
     const firebaseToken = await adminAuth.createCustomToken(
-      payload.sub,
+      firebaseUid,
       buildClaims(payload as Record<string, unknown>)
     );
 
@@ -73,3 +85,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid Auth0 token.' }, { status: 401 });
   }
 }
+
