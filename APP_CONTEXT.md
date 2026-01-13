@@ -1,7 +1,7 @@
 # Tool Vault - Application Context
 
 ## 1. Product Vision
-**Tool Vault** is a private, "desktop-first" yet fully mobile-optimized personal knowledge base designed for developers and tech enthusiasts. It serves as a smart, automated alternative to browser bookmarks for tracking software tools, libraries, and SaaS products.
+**Tool Vault** is "desktop-first" yet fully mobile-optimized personal knowledge base designed for developers and tech enthusiasts. It serves as a smart, automated alternative to browser bookmarks for tracking software tools, libraries, and SaaS products.
 
 ## 2. Core Goals
 *   **Eliminate Manual Data Entry**: Remove the friction of saving a tool. Users simply input a name or URL, and the app does the rest using AI.
