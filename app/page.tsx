@@ -1505,13 +1505,6 @@ export default function Page() {
   const { user, loading } = useAuth();
   const isAdmin = user?.email?.toLowerCase() === 'cloudberrystickers@gmail.com';
 
-  if (loading) {
-    return null;
-  }
-
-  if (!user) {
-    return <LoginModal isOpen />;
-  }
 // 1. Initialize & Sync Data (Firestore)
   useEffect(() => {
     if (!user) return;
@@ -1786,6 +1779,14 @@ export default function Page() {
   }, [tools, activeCategory, searchQuery]);
 
   const selectedTool = useMemo(() => tools.find(t => t.id === selectedToolId), [tools, selectedToolId]);
+
+  if (loading) {
+    return null;
+  }
+
+  if (!user) {
+    return <LoginModal isOpen />;
+  }
 
   return (
     <div className="flex min-h-screen bg-black text-gray-200 font-sans selection:bg-primary/30">
