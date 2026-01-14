@@ -34,6 +34,17 @@ const EMPTY_NOTES = {
   links: ''
 };
 
+const MAX_CATEGORY_LENGTH = 32;
+
+const normalizeCategories = (cats: string[]) => (
+  Array.from(new Set(
+    cats
+      .map((cat) => cat.trim().slice(0, MAX_CATEGORY_LENGTH))
+      .filter(Boolean)
+  )).sort()
+);
+
+
 const mergeGlobalAndUser = (globalTool: any, userTool: UserTool): Tool => {
   const overrides = userTool.overrides || {};
   const notes = userTool.notes || EMPTY_NOTES;
@@ -426,7 +437,6 @@ const SettingsModal = ({
   categories: string[],
   onUpdateCategories: (newCats: string[]) => void
 }) => {
-  const MAX_CATEGORY_LENGTH = 32;
   const [newCat, setNewCat] = useState('');
 
   const addCategory = () => {
@@ -455,6 +465,7 @@ const SettingsModal = ({
             <div className="space-y-4">
                <div className="flex gap-2">
                  <input 
+                   type="text"
                    className="flex-1 bg-black border border-border rounded-lg px-4 py-2 text-white text-base md:text-sm focus:border-primary focus:outline-none"
                    placeholder="New category name..."
                    value={newCat}
@@ -469,9 +480,9 @@ const SettingsModal = ({
                
                <div className="grid grid-cols-2 gap-2">
                  {categories.map(cat => (
-                   <div key={cat} className="flex items-center justify-between p-3 bg-black border border-border rounded-lg group">
-                      <span className="text-sm text-gray-300">{cat}</span>
-                      <button onClick={() => removeCategory(cat)} className="text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                   <div key={cat} className="flex items-center gap-2 p-3 bg-black border border-border rounded-lg">
+                      <span className="text-sm text-gray-300 truncate flex-1 min-w-0" title={cat}>{cat}</span>
+                      <button onClick={() => removeCategory(cat)} className="text-gray-600 hover:text-red-500 transition-colors shrink-0" title="Delete category">
                         <Trash2 size={14} />
                       </button>
                    </div>
@@ -1526,7 +1537,7 @@ export default function Page() {
     });
     unsubscribeCats = subscribeToCategories(user.uid, (cloudCats) => {
       if (cloudCats && cloudCats.length > 0) {
-        setCategories(cloudCats);
+        setCategories(normalizeCategories(cloudCats));
       } else {
         // Initialize user with default categories if they don't have any yet
         // (Can optionally do this in handleUpdateCategories, but here ensures defaults load)
@@ -1719,12 +1730,14 @@ export default function Page() {
   };
 
   const handleUpdateCategories = (newCats: string[]) => {
+    const normalized = normalizeCategories(newCats);
+
     if (user) {
       // Optimistic update for categories to avoid UI jump
-      setCategories(newCats);
-      syncCategoriesToFirestore(user.uid, newCats);
+      setCategories(normalized);
+      syncCategoriesToFirestore(user.uid, normalized);
     } else {
-      setCategories(newCats);
+      setCategories(normalized);
     }
   };
 
