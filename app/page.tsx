@@ -571,6 +571,7 @@ const AddToolModal = ({
   const [input, setInput] = useState('');
   const [draftTool, setDraftTool] = useState<Partial<Tool>>({});
   const [newTag, setNewTag] = useState('');
+  const [customCategory, setCustomCategory] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -578,6 +579,7 @@ const AddToolModal = ({
       setInput('');
       setDraftTool({});
       setNewTag('');
+      setCustomCategory('');
     }
   }, [isOpen]);
 
@@ -698,7 +700,9 @@ const AddToolModal = ({
       });
       return;
     }
-    onSave(draftTool as Tool);
+    const normalizedCategory = normalizeCategory(draftTool.category || categories[0] || 'Productivity');
+    const nextTool = { ...draftTool, category: normalizedCategory };
+    onSave(nextTool as Tool);
     onClose();
   };
 
@@ -818,16 +822,39 @@ const AddToolModal = ({
                  </div>
                  <div className="space-y-4">
                     <label className="block text-xs font-bold text-secondary uppercase tracking-wider">Category</label>
-                    <input 
-                      list="category-options"
+                    <select 
                       className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
-                      value={draftTool.category || ''}
-                      onChange={e => setDraftTool({...draftTool, category: e.target.value})}
-                      placeholder="Select or type..."
-                    />
-                    <datalist id="category-options">
-                      {categories.map(c => <option key={c} value={c} />)}
-                    </datalist>
+                      value={(draftTool.category && !categories.includes(draftTool.category)) ? '__custom__' : (draftTool.category || categories[0] || '')}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '__custom__') {
+                          setCustomCategory('');
+                          setDraftTool({ ...draftTool, category: '' });
+                          return;
+                        }
+                        setCustomCategory('');
+                        setDraftTool({ ...draftTool, category: value });
+                      }}
+                    >
+                      {(draftTool.category || categories[0]) ? null : <option value="" disabled>Select a category</option>}
+                      {categories.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                      <option value="__custom__">Add New...</option>
+                    </select>
+                    {(draftTool.category && !categories.includes(draftTool.category)) || customCategory !== '' ? (
+                      <input 
+                        className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                        placeholder="New category name..."
+                        value={(draftTool.category && !categories.includes(draftTool.category)) ? draftTool.category : customCategory}
+                        maxLength={MAX_CATEGORY_LENGTH}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          setCustomCategory(raw);
+                          setDraftTool({ ...draftTool, category: normalizeCategory(raw) });
+                        }}
+                      />
+                    ) : null}
                  </div>
               </div>
               <div className="bg-black/30 p-4 rounded-xl border border-border/50">
@@ -945,6 +972,7 @@ const ToolDetail = ({
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [editedTool, setEditedTool] = useState<Tool>(tool);
   const [newTag, setNewTag] = useState('');
+  const [customCategory, setCustomCategory] = useState('');
   const [isDirty, setIsDirty] = useState(false);
   const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false);
   const [pendingAction, setPendingAction] = useState<'close' | 'cancel' | null>(null);
@@ -958,6 +986,7 @@ const ToolDetail = ({
       lastToolIdRef.current = tool.id;
       setEditedTool({ ...tool, notes: normalizedNotes });
       setNoteDrafts(normalizedNotes);
+      setCustomCategory(tool.category && !categories.includes(tool.category) ? tool.category : '');
       setIsEditing(false);
       setAdminMode(false);
       setAdvancedMode(false);
@@ -1087,6 +1116,7 @@ const ToolDetail = ({
 
     const nextTool = {
       ...editedTool,
+      category: normalizeCategory(editedTool.category || categories[0] || 'Productivity'),
       notes: { ...EMPTY_NOTES, ...noteDrafts },
       updatedAt: Date.now()
     };
@@ -1231,16 +1261,40 @@ const ToolDetail = ({
                 <div className="flex flex-wrap items-center gap-3 text-sm">
                    {isEditing ? (
                       <>
-                        <input 
-                          list="category-options-detail"
-                          className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
-                          value={editedTool.category}
-                          onChange={(e) => updateEditedTool((prev) => ({ ...prev, category: e.target.value }))}
-                          placeholder="Category"
-                        />
-                        <datalist id="category-options-detail">
-                          {categories.map(c => <option key={c} value={c} />)}
-                        </datalist>
+                        <div className="flex flex-col gap-2">
+                          <select 
+                            className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                            value={(editedTool.category && !categories.includes(editedTool.category)) ? '__custom__' : (editedTool.category || categories[0] || '')}
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              if (value === '__custom__') {
+                                setCustomCategory('');
+                                updateEditedTool((prev) => ({ ...prev, category: '' }));
+                                return;
+                              }
+                              setCustomCategory('');
+                              updateEditedTool((prev) => ({ ...prev, category: value }));
+                            }}
+                          >
+                            {categories.map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                            <option value="__custom__">Add New...</option>
+                          </select>
+                          {(editedTool.category && !categories.includes(editedTool.category)) || customCategory !== '' ? (
+                            <input 
+                              className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                              placeholder="New category name..."
+                              value={(editedTool.category && !categories.includes(editedTool.category)) ? editedTool.category : customCategory}
+                              maxLength={MAX_CATEGORY_LENGTH}
+                              onChange={(e) => {
+                                const raw = e.target.value;
+                                setCustomCategory(raw);
+                                updateEditedTool((prev) => ({ ...prev, category: normalizeCategory(raw) }));
+                              }}
+                            />
+                          ) : null}
+                        </div>
                       </>
                    ) : (
                       <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">{editedTool.category}</span>
