@@ -426,11 +426,13 @@ const SettingsModal = ({
   categories: string[],
   onUpdateCategories: (newCats: string[]) => void
 }) => {
+  const MAX_CATEGORY_LENGTH = 32;
   const [newCat, setNewCat] = useState('');
 
   const addCategory = () => {
-    if (newCat.trim() && !categories.includes(newCat.trim())) {
-      onUpdateCategories([...categories, newCat.trim()].sort());
+    const trimmed = newCat.trim().slice(0, MAX_CATEGORY_LENGTH);
+    if (trimmed && !categories.includes(trimmed)) {
+      onUpdateCategories([...categories, trimmed].sort());
       setNewCat('');
     }
   };
@@ -456,7 +458,8 @@ const SettingsModal = ({
                    className="flex-1 bg-black border border-border rounded-lg px-4 py-2 text-white text-base md:text-sm focus:border-primary focus:outline-none"
                    placeholder="New category name..."
                    value={newCat}
-                   onChange={e => setNewCat(e.target.value)}
+                   maxLength={MAX_CATEGORY_LENGTH}
+                   onChange={e => setNewCat(e.target.value.slice(0, MAX_CATEGORY_LENGTH))}
                    onKeyDown={e => e.key === 'Enter' && addCategory()}
                  />
                  <button onClick={addCategory} className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primaryHover">
