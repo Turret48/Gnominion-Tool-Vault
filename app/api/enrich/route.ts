@@ -147,7 +147,7 @@ const normalizeGlobalToolResponse = (toolId: string, data: any) => {
     name: data.name || '',
     summary: data.summary || '',
     bestUseCases: data.bestUseCases || [],
-    category: data.category || 'Other',
+    category: data.category || 'Productivity',
     tags: data.tags || [],
     integrations: data.integrations || [],
     pricingBucket: data.pricingBucket || 'Unknown',
@@ -215,7 +215,7 @@ Provide a structured analysis suitable for a personal knowledge base.
 
 IMPORTANT - Categorization Rules:
 - You MUST strictly select one category from the following list: [${categoriesList}].
-- Choose the one that fits best. If absolutely nothing fits, select 'Other'.
+- Choose the one that fits best. If absolutely nothing fits, select 'Productivity'.
 
 Also return the official website URL when possible.`;
 
@@ -413,7 +413,7 @@ export async function POST(request: Request) {
         name: enriched.name,
         summary: enriched.summary,
         bestUseCases: enriched.bestUseCases || [],
-        category: enriched.category || 'Other',
+        category: enriched.category || 'Productivity',
         tags: enriched.tags || [],
         integrations: enriched.integrations || [],
         pricingBucket: enriched.pricingBucket || 'Unknown',
@@ -494,7 +494,7 @@ export async function POST(request: Request) {
       name: enriched.name,
       summary: enriched.summary,
       bestUseCases: enriched.bestUseCases || [],
-      category: enriched.category || 'Other',
+      category: enriched.category || 'Productivity',
       tags: enriched.tags || [],
       integrations: enriched.integrations || [],
       pricingBucket: enriched.pricingBucket || 'Unknown',

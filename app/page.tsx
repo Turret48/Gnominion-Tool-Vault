@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Search, Plus, X, LayoutGrid, List as ListIcon, Database, ArrowUpRight, Hash, Tag, 
-  Check, Save, Trash2, Download, Upload, Cpu, Zap, PenTool, Mail, BarChart2, AlertTriangle, Menu,
-  Settings, LogOut, User as UserIcon, BookOpen
+  Check, Save, Trash2, Download, Upload, Cpu, Zap, PenTool, BarChart2, AlertTriangle, Menu,
+  Settings, LogOut, User as UserIcon, BookOpen, Users, FileText, ClipboardList, CalendarClock, Code
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Tool, UserTool, GlobalTool, PricingBucket, ToolStatus, DEFAULT_CATEGORIES } from '../types';
@@ -34,12 +34,39 @@ const EMPTY_NOTES = {
   links: ''
 };
 
-const MAX_CATEGORY_LENGTH = 32;
+const MAX_CATEGORY_LENGTH = 26;
+
+const CATEGORY_SYNONYMS: Record<string, string> = {
+  'dev tools': 'Development',
+  'devtools': 'Development',
+  'knowledge base': 'Notes',
+  'knowledgebase': 'Notes',
+  'docs': 'Notes',
+  'documentation': 'Notes',
+  'doc': 'Notes',
+  'email': 'CRM',
+  'data': 'Analytics',
+  'backend': 'Backends',
+  'back end': 'Backends',
+  'infrastructure': 'Backends',
+  'other': 'Productivity'
+};
+
+const DEFAULT_CATEGORY_LOOKUP = new Map(
+  DEFAULT_CATEGORIES.map((cat) => [cat.toLowerCase(), cat])
+);
+
+const normalizeCategory = (cat: string) => {
+  const trimmed = cat.trim().slice(0, MAX_CATEGORY_LENGTH);
+  if (!trimmed) return '';
+  const lower = trimmed.toLowerCase();
+  return CATEGORY_SYNONYMS[lower] || DEFAULT_CATEGORY_LOOKUP.get(lower) || trimmed;
+};
 
 const normalizeCategories = (cats: string[]) => (
   Array.from(new Set(
     cats
-      .map((cat) => cat.trim().slice(0, MAX_CATEGORY_LENGTH))
+      .map((cat) => normalizeCategory(cat))
       .filter(Boolean)
   )).sort()
 );
@@ -55,7 +82,7 @@ const mergeGlobalAndUser = (globalTool: any, userTool: UserTool): Tool => {
     logoUrl: overrides.logoUrl ?? globalTool?.logoUrl ?? '',
     summary: overrides.summary ?? globalTool?.summary ?? '',
     bestUseCases: overrides.bestUseCases ?? globalTool?.bestUseCases ?? [],
-    category: userTool.category || globalTool?.category || 'Other',
+    category: normalizeCategory(userTool.category || globalTool?.category || 'Productivity'),
     tags: userTool.tags || globalTool?.tags || [],
     integrations: overrides.integrations ?? globalTool?.integrations ?? [],
     pricingBucket: overrides.pricingBucket ?? globalTool?.pricingBucket ?? PricingBucket.UNKNOWN,
@@ -85,7 +112,7 @@ const globalToTool = (globalTool: GlobalTool): Tool => {
     logoUrl: globalTool.logoUrl || '',
     summary: globalTool.summary || '',
     bestUseCases: globalTool.bestUseCases || [],
-    category: globalTool.category || 'Other',
+    category: normalizeCategory(globalTool.category || 'Productivity'),
     tags: globalTool.tags || [],
     integrations: globalTool.integrations || [],
     pricingBucket: globalTool.pricingBucket || PricingBucket.UNKNOWN,
@@ -238,9 +265,14 @@ const Sidebar = ({
     const l = cat.toLowerCase();
     if (l.includes('ai')) return <Cpu size={18} />;
     if (l.includes('automation')) return <Zap size={18} />;
-    if (l.includes('design')) return <PenTool size={18} />;
-    if (l.includes('email')) return <Mail size={18} />;
     if (l.includes('analytics')) return <BarChart2 size={18} />;
+    if (l.includes('backend') || l.includes('infrastructure')) return <Database size={18} />;
+    if (l.includes('crm')) return <Users size={18} />;
+    if (l.includes('design')) return <PenTool size={18} />;
+    if (l.includes('development') || l.includes('dev tools')) return <Code size={18} />;
+    if (l.includes('notes') || l.includes('knowledge')) return <FileText size={18} />;
+    if (l.includes('form')) return <ClipboardList size={18} />;
+    if (l.includes('productivity')) return <CalendarClock size={18} />;
     return <Hash size={18} />;
   };
 
@@ -440,9 +472,9 @@ const SettingsModal = ({
   const [newCat, setNewCat] = useState('');
 
   const addCategory = () => {
-    const trimmed = newCat.trim().slice(0, MAX_CATEGORY_LENGTH);
-    if (trimmed && !categories.includes(trimmed)) {
-      onUpdateCategories([...categories, trimmed].sort());
+    const normalized = normalizeCategory(newCat);
+    if (normalized && !categories.includes(normalized)) {
+      onUpdateCategories([...categories, normalized].sort());
       setNewCat('');
     }
   };
@@ -1579,19 +1611,24 @@ export default function Page() {
 
   const CATALOG_TABS = [
     'All',
-    'Analytics',
+    'AI',
     'Automation',
+    'Analytics',
+    'Backends',
+    'CRM',
     'Design',
     'Development',
-    'Knowledge Base',
+    'Notes',
+    'Forms',
+    'Productivity',
   ];
 
   const matchesCatalogCategory = (tool: GlobalTool, tab: string) => {
     const lower = (tool.category || '').toLowerCase();
     const tabLower = tab.toLowerCase();
     if (tabLower === 'all') return true;
-    if (tabLower === 'knowledge base') {
-      return lower.includes('knowledge') || lower.includes('kb');
+    if (tabLower === 'notes') {
+      return lower.includes('notes') || lower.includes('knowledge') || lower.includes('docs');
     }
     return lower.includes(tabLower);
   };

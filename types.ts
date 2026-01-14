@@ -16,14 +16,16 @@ export enum ToolStatus {
 
 // Default categories for new users, but now just a string array helper
 export const DEFAULT_CATEGORIES = [
-  'Automation',
   'AI',
+  'Automation',
+  'Analytics',
+  'Backends',
   'CRM',
   'Design',
-  'Email',
-  'Analytics',
   'Development',
-  'Other'
+  'Notes',
+  'Forms',
+  'Productivity'
 ];
 
 export interface NoteSection {
