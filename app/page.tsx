@@ -71,6 +71,11 @@ const normalizeCategories = (cats: string[]) => (
   )).sort()
 );
 
+const mergeWithDefaultCategories = (cats: string[]) => (
+  Array.from(new Set([...DEFAULT_CATEGORIES, ...normalizeCategories(cats)])).sort()
+);
+
+
 
 const mergeGlobalAndUser = (globalTool: any, userTool: UserTool): Tool => {
   const overrides = userTool.overrides || {};
@@ -521,7 +526,7 @@ const SettingsModal = ({
                  ))}
                </div>
                <p className="text-[10px] text-gray-500 mt-4">
-                 Note: Deleting a category will not delete the tools in it, but they may need re-categorization.
+                 Note: Deleting a category will not delete the tools in it; tools will fall back to your default category.
                </p>
             </div>
         </div>
@@ -558,13 +563,15 @@ const AddToolModal = ({
   onClose, 
   onSave,
   categories,
-  onNotice
+  onNotice,
+  onUpdateCategories
 }: { 
   isOpen: boolean, 
   onClose: () => void, 
   onSave: (tool: Tool) => void,
   categories: string[],
-  onNotice: (notice: { title: string; message: string }) => void
+  onNotice: (notice: { title: string; message: string }) => void,
+  onUpdateCategories: (newCats: string[]) => void
 }) => {
   const { user } = useAuth();
   const [step, setStep] = useState<'chat' | 'enriching' | 'review'>('chat');
@@ -703,6 +710,9 @@ const AddToolModal = ({
       return;
     }
     const normalizedCategory = normalizeCategory(draftTool.category || categories[0] || 'Productivity');
+    if (normalizedCategory && !categories.includes(normalizedCategory)) {
+      onUpdateCategories(mergeWithDefaultCategories([...categories, normalizedCategory]));
+    }
     const nextTool = { ...draftTool, category: normalizedCategory };
     onSave(nextTool as Tool);
     onClose();
@@ -976,8 +986,6 @@ const ToolDetail = ({
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [editedTool, setEditedTool] = useState<Tool>(tool);
   const [newTag, setNewTag] = useState('');
-  const [customCategory, setCustomCategory] = useState('');
-  const [customCategoryOpen, setCustomCategoryOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false);
   const [pendingAction, setPendingAction] = useState<'close' | 'cancel' | null>(null);
@@ -986,14 +994,21 @@ const ToolDetail = ({
   const canEditGlobal = isAdmin && adminMode && canEditAdvanced;
 
   useEffect(() => {
+    if (!categories.length) return;
+    if (editedTool.category && !categories.includes(editedTool.category)) {
+      setEditedTool((prev) => ({ ...prev, category: categories[0] || 'Productivity' }));
+    }
+  }, [categories, editedTool.category]);
+
+  useEffect(() => {
     if (lastToolIdRef.current !== tool.id) {
       const normalizedNotes = { ...EMPTY_NOTES, ...(tool.notes || {}) };
       lastToolIdRef.current = tool.id;
       setEditedTool({ ...tool, notes: normalizedNotes });
       setNoteDrafts(normalizedNotes);
-      const isCustom = tool.category && !categories.includes(tool.category);
-      setCustomCategory(isCustom ? tool.category : '');
-      setCustomCategoryOpen(Boolean(isCustom));
+      if (tool.category && !categories.includes(tool.category)) {
+        setEditedTool((prev) => ({ ...prev, category: categories[0] || 'Productivity' }));
+      }
       setIsEditing(false);
       setAdminMode(false);
       setAdvancedMode(false);
@@ -1268,45 +1283,18 @@ const ToolDetail = ({
                 <div className="flex flex-wrap items-center gap-3 text-sm">
                    {isEditing ? (
                       <>
-                        <div className="flex flex-col gap-2">
-                          <select 
-                            className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
-                            value={(editedTool.category && !categories.includes(editedTool.category)) ? '__custom__' : (editedTool.category || categories[0] || '')}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === '__custom__') {
-                                setCustomCategory('');
-                                setCustomCategoryOpen(true);
-                                updateEditedTool((prev) => ({ ...prev, category: '' }));
-                                return;
-                              }
-                              setCustomCategory('');
-                              setCustomCategoryOpen(false);
-                              updateEditedTool((prev) => ({ ...prev, category: value }));
-                            }}
-                          >
-                            {categories.map((c) => (
-                              <option key={c} value={c}>{c}</option>
-                            ))}
-                            <option value="__custom__">Add New...</option>
-                          </select>
-                          {customCategoryOpen || (editedTool.category && !categories.includes(editedTool.category)) || customCategory !== '' ? (
-                            <input 
-                              className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
-                              placeholder="New category name..."
-                              value={(editedTool.category && !categories.includes(editedTool.category)) ? editedTool.category : customCategory}
-                              maxLength={MAX_CATEGORY_LENGTH}
-                              onChange={(e) => {
-                                const raw = e.target.value;
-                                setCustomCategory(raw);
-                                updateEditedTool((prev) => ({ ...prev, category: normalizeCategory(raw) }));
-                              }}
-                            />
-                          ) : null}
-                        </div>
+                        <select 
+                          className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                          value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
+                          onChange={(e) => updateEditedTool((prev) => ({ ...prev, category: e.target.value }))}
+                        >
+                          {categories.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
                       </>
                    ) : (
-                      <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">{editedTool.category}</span>
+                      <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">{categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}</span>
                    )}
                    
                    {isEditing ? (
@@ -1632,7 +1620,7 @@ export default function Page() {
     });
     unsubscribeCats = subscribeToCategories(user.uid, (cloudCats) => {
       if (cloudCats && cloudCats.length > 0) {
-        setCategories(normalizeCategories(cloudCats));
+        setCategories(mergeWithDefaultCategories(cloudCats));
       } else {
         // Initialize user with default categories if they don't have any yet
         // (Can optionally do this in handleUpdateCategories, but here ensures defaults load)
@@ -1830,7 +1818,7 @@ export default function Page() {
   };
 
   const handleUpdateCategories = (newCats: string[]) => {
-    const normalized = normalizeCategories(newCats);
+    const normalized = mergeWithDefaultCategories(newCats);
 
     if (user) {
       // Optimistic update for categories to avoid UI jump
@@ -2052,6 +2040,7 @@ export default function Page() {
         onSave={handleAddTool} 
         categories={categories}
         onNotice={(notice) => setEnrichmentNotice(notice)}
+        onUpdateCategories={handleUpdateCategories}
       />
 
       <SettingsModal
