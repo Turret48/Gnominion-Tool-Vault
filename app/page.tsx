@@ -46,6 +46,8 @@ const CATEGORY_SYNONYMS: Record<string, string> = {
   'doc': 'Notes',
   'email': 'CRM',
   'data': 'Analytics',
+  'form': 'Forms',
+  'forms': 'Forms',
   'backend': 'Backends',
   'back end': 'Backends',
   'infrastructure': 'Backends',
@@ -475,6 +477,7 @@ const SettingsModal = ({
   onUpdateCategories: (newCats: string[]) => void
 }) => {
   const [newCat, setNewCat] = useState('');
+  const defaultCategoryLookup = new Set(DEFAULT_CATEGORIES.map((cat) => cat.toLowerCase()));
 
   const addCategory = () => {
     const normalized = normalizeCategory(newCat);
@@ -519,9 +522,13 @@ const SettingsModal = ({
                  {categories.map(cat => (
                    <div key={cat} className="flex items-center gap-2 p-3 bg-black border border-border rounded-lg">
                       <span className="text-sm text-gray-300 truncate flex-1 min-w-0" title={cat}>{cat}</span>
-                      <button onClick={() => removeCategory(cat)} className="text-gray-600 hover:text-red-500 transition-colors shrink-0" title="Delete category">
-                        <Trash2 size={14} />
-                      </button>
+                      {defaultCategoryLookup.has(cat.toLowerCase()) ? (
+                        <span className="text-[10px] text-gray-500 border border-border rounded-full px-2 py-0.5">Default</span>
+                      ) : (
+                        <button onClick={() => removeCategory(cat)} className="text-gray-600 hover:text-red-500 transition-colors shrink-0" title="Delete category">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                    </div>
                  ))}
                </div>
