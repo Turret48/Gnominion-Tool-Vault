@@ -572,6 +572,7 @@ const AddToolModal = ({
   const [draftTool, setDraftTool] = useState<Partial<Tool>>({});
   const [newTag, setNewTag] = useState('');
   const [customCategory, setCustomCategory] = useState('');
+  const [customCategoryOpen, setCustomCategoryOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -580,6 +581,7 @@ const AddToolModal = ({
       setDraftTool({});
       setNewTag('');
       setCustomCategory('');
+      setCustomCategoryOpen(false);
     }
   }, [isOpen]);
 
@@ -829,10 +831,12 @@ const AddToolModal = ({
                         const value = e.target.value;
                         if (value === '__custom__') {
                           setCustomCategory('');
+                          setCustomCategoryOpen(true);
                           setDraftTool({ ...draftTool, category: '' });
                           return;
                         }
                         setCustomCategory('');
+                        setCustomCategoryOpen(false);
                         setDraftTool({ ...draftTool, category: value });
                       }}
                     >
@@ -842,7 +846,7 @@ const AddToolModal = ({
                       ))}
                       <option value="__custom__">Add New...</option>
                     </select>
-                    {(draftTool.category && !categories.includes(draftTool.category)) || customCategory !== '' ? (
+                    {customCategoryOpen || (draftTool.category && !categories.includes(draftTool.category)) || customCategory !== '' ? (
                       <input 
                         className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                         placeholder="New category name..."
@@ -973,6 +977,7 @@ const ToolDetail = ({
   const [editedTool, setEditedTool] = useState<Tool>(tool);
   const [newTag, setNewTag] = useState('');
   const [customCategory, setCustomCategory] = useState('');
+  const [customCategoryOpen, setCustomCategoryOpen] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false);
   const [pendingAction, setPendingAction] = useState<'close' | 'cancel' | null>(null);
@@ -986,7 +991,9 @@ const ToolDetail = ({
       lastToolIdRef.current = tool.id;
       setEditedTool({ ...tool, notes: normalizedNotes });
       setNoteDrafts(normalizedNotes);
-      setCustomCategory(tool.category && !categories.includes(tool.category) ? tool.category : '');
+      const isCustom = tool.category && !categories.includes(tool.category);
+      setCustomCategory(isCustom ? tool.category : '');
+      setCustomCategoryOpen(Boolean(isCustom));
       setIsEditing(false);
       setAdminMode(false);
       setAdvancedMode(false);
@@ -1269,10 +1276,12 @@ const ToolDetail = ({
                               const value = e.target.value;
                               if (value === '__custom__') {
                                 setCustomCategory('');
+                                setCustomCategoryOpen(true);
                                 updateEditedTool((prev) => ({ ...prev, category: '' }));
                                 return;
                               }
                               setCustomCategory('');
+                              setCustomCategoryOpen(false);
                               updateEditedTool((prev) => ({ ...prev, category: value }));
                             }}
                           >
@@ -1281,7 +1290,7 @@ const ToolDetail = ({
                             ))}
                             <option value="__custom__">Add New...</option>
                           </select>
-                          {(editedTool.category && !categories.includes(editedTool.category)) || customCategory !== '' ? (
+                          {customCategoryOpen || (editedTool.category && !categories.includes(editedTool.category)) || customCategory !== '' ? (
                             <input 
                               className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
                               placeholder="New category name..."
