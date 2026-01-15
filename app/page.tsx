@@ -494,7 +494,7 @@ const ProfileSetupModal = ({
   const handleSave = () => {
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setError('Please enter your name to continue.');
+      setError('Please enter a name to continue.');
       return;
     }
     onSave({
@@ -515,7 +515,7 @@ const ProfileSetupModal = ({
         <div className="flex flex-col gap-4">
           <div>
             <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">Tell us about you</h3>
-            <p className="text-secondary text-sm">This helps personalize your vault. Name is required.</p>
+            <p className="text-secondary text-sm">This helps personalize your vault.</p>
           </div>
 
           {error && (
@@ -545,15 +545,32 @@ const ProfileSetupModal = ({
             </div>
             <div>
               <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Industry (optional)</label>
-              <input
+              <select
                 className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
-                placeholder="Industry"
-              />
+              >
+                <option value="">Select industry</option>
+                <option value="Technology">Technology</option>
+                <option value="Software / SaaS">Software / SaaS</option>
+                <option value="Agency / Consulting">Agency / Consulting</option>
+                <option value="Freelance / Independent">Freelance / Independent</option>
+                <option value="E-commerce">E-commerce</option>
+                <option value="Marketing / Advertising">Marketing / Advertising</option>
+                <option value="Design / Creative">Design / Creative</option>
+                <option value="Finance / Fintech">Finance / Fintech</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Education">Education</option>
+                <option value="Media / Content">Media / Content</option>
+                <option value="Nonprofit">Nonprofit</option>
+                <option value="Student">Student</option>
+                <option value="Hobby / Personal Projects">Hobby / Personal Projects</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
           </div>
 
+          <p className="text-[11px] text-gray-500">You can change or add this information in the settings at any time.</p>
           <div className="flex justify-end">
             <button
               type="button"
