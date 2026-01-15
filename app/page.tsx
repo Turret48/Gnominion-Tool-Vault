@@ -975,7 +975,8 @@ const ToolDetail = ({
   onRequestDelete,
   categories,
   isAdmin,
-  onAddToCatalog
+  onAddToCatalog,
+  onTagSelect
 }: { 
   tool: Tool, 
   onClose: () => void, 
@@ -983,7 +984,8 @@ const ToolDetail = ({
   onRequestDelete: (id: string) => void,
   categories: string[],
   isAdmin: boolean,
-  onAddToCatalog: (toolId: string) => void
+  onAddToCatalog: (toolId: string) => void,
+  onTagSelect: (tag: string) => void
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [adminMode, setAdminMode] = useState(false);
@@ -1453,10 +1455,24 @@ const ToolDetail = ({
              )}
              <div className="flex flex-wrap gap-2">
               {editedTool.tags.map(tag => (
-                <span key={tag} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black border border-border text-xs font-medium text-secondary">
-                  <Tag size={12} /> {tag}
-                  {isEditing && <button onClick={() => removeTag(tag)} className="ml-1 hover:text-white"><X size={10} /></button>}
-                </span>
+                isEditing ? (
+                  <span key={tag} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black border border-border text-xs font-medium text-secondary">
+                    <Tag size={12} /> {tag}
+                    <button onClick={() => removeTag(tag)} className="ml-1 hover:text-white"><X size={10} /></button>
+                  </span>
+                ) : (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => {
+                      onTagSelect(tag);
+                      onClose();
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black border border-border text-xs font-medium text-secondary transition-colors hover:text-white hover:border-primary/40"
+                  >
+                    <Tag size={12} /> {tag}
+                  </button>
+                )
               ))}
             </div>
              {isEditing && (
@@ -1891,6 +1907,11 @@ export default function Page() {
 
   const selectedTool = useMemo(() => tools.find(t => t.id === selectedToolId), [tools, selectedToolId]);
 
+  const handleTagSelect = (tag: string) => {
+    setSearchQuery(tag);
+    setActiveCategory('All');
+  };
+
   if (loading) {
     return null;
   }
@@ -2287,6 +2308,7 @@ export default function Page() {
           categories={categories}
           isAdmin={isAdmin}
           onAddToCatalog={handleAddToCatalog}
+          onTagSelect={handleTagSelect}
         />
       )}
     </div>
