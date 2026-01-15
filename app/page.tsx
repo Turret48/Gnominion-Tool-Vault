@@ -7,7 +7,7 @@ import {
   Settings, LogOut, User as UserIcon, BookOpen, Users, FileText, ClipboardList, CalendarClock, Code
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { Tool, UserTool, GlobalTool, PricingBucket, ToolStatus, DEFAULT_CATEGORIES } from '../types';
+import { Tool, UserTool, GlobalTool, PricingBucket, ToolStatus, DEFAULT_CATEGORIES, UserProfile } from '../types';
 import {
   exportData,
   subscribeToUserTools,
@@ -18,6 +18,8 @@ import {
   syncCategoriesToFirestore,
   fetchGlobalTools,
   fetchCatalogEntries,
+  fetchUserProfile,
+  saveUserProfile,
 } from '../services/storageService';
 import { enrichToolData } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
@@ -465,6 +467,108 @@ const LoginModal = ({
     </div>
   );
 };
+const ProfileSetupModal = ({
+  isOpen,
+  email,
+  initialProfile,
+  onSave
+}: {
+  isOpen: boolean;
+  email: string;
+  initialProfile: UserProfile | null;
+  onSave: (profile: UserProfile) => void;
+}) => {
+  const [name, setName] = useState('');
+  const [company, setCompany] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setName(initialProfile?.name || '');
+    setCompany(initialProfile?.company || '');
+    setIndustry(initialProfile?.industry || '');
+    setError('');
+  }, [isOpen, initialProfile]);
+
+  const handleSave = () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setError('Please enter your name to continue.');
+      return;
+    }
+    onSave({
+      name: trimmedName,
+      company: company.trim() || undefined,
+      industry: industry.trim() || undefined,
+      email
+    });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+      <div className="bg-surface border border-border rounded-2xl p-8 max-w-md w-full shadow-2xl animate-fade-in-up relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50"></div>
+
+        <div className="flex flex-col gap-4">
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">Tell us about you</h3>
+            <p className="text-secondary text-sm">This helps personalize your vault. Name is required.</p>
+          </div>
+
+          {error && (
+            <div className="w-full p-3 bg-red-900/20 border border-red-900/50 rounded-lg text-red-200 text-xs">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Name *</label>
+              <input
+                className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Company (optional)</label>
+              <input
+                className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                placeholder="Company"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Industry (optional)</label>
+              <input
+                className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                placeholder="Industry"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handleSave}
+              className="px-6 py-2.5 rounded-full text-sm font-bold bg-primary text-white hover:bg-primaryHover transition-all shadow-lg"
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SettingsModal = ({
   isOpen,
   onClose,
@@ -1617,6 +1721,10 @@ export default function Page() {
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogCategory, setCatalogCategory] = useState('All');
   const [catalogSearch, setCatalogSearch] = useState('');
+
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [isProfileSetupOpen, setIsProfileSetupOpen] = useState(false);
   
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [toolToDelete, setToolToDelete] = useState<Tool | null>(null);
@@ -1658,14 +1766,46 @@ export default function Page() {
   }, [user]);
 
   useEffect(() => {
-    if (user) {
+    if (!user) {
+      setProfile(null);
+      setProfileLoading(false);
+      setIsProfileSetupOpen(false);
+      return;
+    }
+
+    let isMounted = true;
+    setProfileLoading(true);
+    fetchUserProfile(user.uid)
+      .then((data) => {
+        if (!isMounted) return;
+        setProfile(data);
+        const hasName = Boolean(data?.name && data.name.trim());
+        setIsProfileSetupOpen(!hasName);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setProfile(null);
+        setIsProfileSetupOpen(true);
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setProfileLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (user && !profileLoading && !isProfileSetupOpen) {
       // Show on every login for now (testing); still persist the flag.
       setOnboardingStep(0);
       setIsOnboardingOpen(true);
     } else {
       setIsOnboardingOpen(false);
     }
-  }, [user]);
+  }, [user, profileLoading, isProfileSetupOpen]);
 
   const persistOnboarding = (startMode: 'empty' | 'catalog') => {
     localStorage.setItem('tool_vault_onboarding_completed', 'true');
@@ -1726,6 +1866,19 @@ export default function Page() {
     persistOnboarding('catalog');
     setIsOnboardingOpen(false);
     setIsCatalogOpen(true);
+  };
+
+  const handleProfileSave = async (nextProfile: UserProfile) => {
+    if (!user) return;
+    const payload: UserProfile = {
+      ...nextProfile,
+      email: user.email || nextProfile.email || '',
+      createdAt: profile?.createdAt || Date.now(),
+      updatedAt: Date.now()
+    };
+    await saveUserProfile(user.uid, payload);
+    setProfile(payload);
+    setIsProfileSetupOpen(false);
   };
 
   const loadCatalog = useCallback(async () => {
@@ -1912,12 +2065,23 @@ export default function Page() {
     setActiveCategory('All');
   };
 
-  if (loading) {
+  if (loading || profileLoading) {
     return null;
   }
 
   if (!user) {
     return <LoginModal isOpen />;
+  }
+
+  if (isProfileSetupOpen) {
+    return (
+      <ProfileSetupModal
+        isOpen
+        email={user.email || ''}
+        initialProfile={profile}
+        onSave={handleProfileSave}
+      />
+    );
   }
 
   return (

@@ -12,7 +12,7 @@ import {
   documentId,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Tool, UserTool, GlobalTool, ToolCatalogEntry } from '../types';
+import { Tool, UserTool, GlobalTool, ToolCatalogEntry, UserProfile } from '../types';
 
 const STORAGE_KEY = 'tool_vault_v1';
 
@@ -69,6 +69,28 @@ export const syncCategoriesToFirestore = async (
   } catch (e) {
     console.error('Failed to sync categories', e);
   }
+};
+
+export const fetchUserProfile = async (userId: string) => {
+  if (!db) return null as UserProfile | null;
+  const userRef = doc(db, 'users', userId);
+  const snap = await getDoc(userRef);
+  if (!snap.exists()) return null;
+  const data = snap.data() as Partial<UserProfile>;
+  return {
+    name: data.name || '',
+    company: data.company,
+    industry: data.industry,
+    email: data.email,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt
+  };
+};
+
+export const saveUserProfile = async (userId: string, profile: UserProfile) => {
+  if (!db) return;
+  const userRef = doc(db, 'users', userId);
+  await setDoc(userRef, profile, { merge: true });
 };
 
 export const subscribeToCategories = (

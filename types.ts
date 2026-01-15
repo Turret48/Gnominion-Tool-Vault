@@ -113,6 +113,15 @@ export interface GlobalTool {
 }
 
 
+export interface UserProfile {
+  name: string;
+  company?: string;
+  industry?: string;
+  email?: string;
+  createdAt?: number;
+  updatedAt?: number;
+}
+
 export interface ToolCatalogEntry {
   toolId: string;
 }
