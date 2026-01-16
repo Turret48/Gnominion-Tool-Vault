@@ -20,6 +20,7 @@ import {
   fetchCatalogEntries,
   fetchUserProfile,
   saveUserProfile,
+  clearUserProfile,
 } from '../services/storageService';
 import { enrichToolData } from '../services/geminiService';
 import { useAuth } from '../context/AuthContext';
@@ -37,6 +38,24 @@ const EMPTY_NOTES = {
 };
 
 const MAX_CATEGORY_LENGTH = 26;
+
+const INDUSTRY_OPTIONS = [
+  'Technology',
+  'Software / SaaS',
+  'Agency / Consulting',
+  'Freelance / Independent',
+  'E-commerce',
+  'Marketing / Advertising',
+  'Design / Creative',
+  'Finance / Fintech',
+  'Healthcare',
+  'Education',
+  'Media / Content',
+  'Nonprofit',
+  'Student',
+  'Hobby / Personal Projects',
+  'Other',
+];
 
 const CATEGORY_SYNONYMS: Record<string, string> = {
   'dev tools': 'Development',
@@ -551,21 +570,9 @@ const ProfileSetupModal = ({
                 onChange={(e) => setIndustry(e.target.value)}
               >
                 <option value="">Select industry</option>
-                <option value="Technology">Technology</option>
-                <option value="Software / SaaS">Software / SaaS</option>
-                <option value="Agency / Consulting">Agency / Consulting</option>
-                <option value="Freelance / Independent">Freelance / Independent</option>
-                <option value="E-commerce">E-commerce</option>
-                <option value="Marketing / Advertising">Marketing / Advertising</option>
-                <option value="Design / Creative">Design / Creative</option>
-                <option value="Finance / Fintech">Finance / Fintech</option>
-                <option value="Healthcare">Healthcare</option>
-                <option value="Education">Education</option>
-                <option value="Media / Content">Media / Content</option>
-                <option value="Nonprofit">Nonprofit</option>
-                <option value="Student">Student</option>
-                <option value="Hobby / Personal Projects">Hobby / Personal Projects</option>
-                <option value="Other">Other</option>
+                {INDUSTRY_OPTIONS.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -586,16 +593,146 @@ const ProfileSetupModal = ({
   );
 };
 
+const AccountSettingsModal = ({
+  isOpen,
+  email,
+  profile,
+  onSave,
+  onClear,
+  onClose
+}: {
+  isOpen: boolean;
+  email: string;
+  profile: UserProfile | null;
+  onSave: (profile: UserProfile) => void;
+  onClear: () => void;
+  onClose: () => void;
+}) => {
+  const [name, setName] = useState('');
+  const [company, setCompany] = useState('');
+  const [industry, setIndustry] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setName(profile?.name || '');
+    setCompany(profile?.company || '');
+    setIndustry(profile?.industry || '');
+    setError('');
+  }, [isOpen, profile]);
+
+  const handleSave = () => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setError('Please enter a name to continue.');
+      return;
+    }
+    onSave({
+      name: trimmedName,
+      company: company.trim() || undefined,
+      industry: industry.trim() || undefined,
+      email
+    });
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+      <div className="bg-surface border border-border rounded-2xl p-8 max-w-md w-full shadow-2xl animate-fade-in-up relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50"></div>
+
+        <div className="flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">Account Settings</h3>
+              <p className="text-secondary text-sm">Manage your account profile details.</p>
+            </div>
+            <button onClick={onClose} className="text-secondary hover:text-white"><X size={18} /></button>
+          </div>
+
+          {error && (
+            <div className="w-full p-3 bg-red-900/20 border border-red-900/50 rounded-lg text-red-200 text-xs">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Name *</label>
+              <input
+                className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Company (optional)</label>
+              <input
+                className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                placeholder="Company"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Industry (optional)</label>
+              <select
+                className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+              >
+                <option value="">Select industry</option>
+                {INDUSTRY_OPTIONS.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Email</label>
+              <input
+                className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white/70 focus:outline-none text-base md:text-sm"
+                value={email}
+                disabled
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-2">
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-xs text-red-300 hover:text-red-200 transition-colors"
+            >
+              Clear profile info
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="px-6 py-2.5 rounded-full text-sm font-bold bg-primary text-white hover:bg-primaryHover transition-all shadow-lg"
+            >
+              Save changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const SettingsModal = ({
   isOpen,
   onClose,
   categories,
-  onUpdateCategories
+  onUpdateCategories,
+  onOpenAccountSettings
 }: {
   isOpen: boolean,
   onClose: () => void,
   categories: string[],
-  onUpdateCategories: (newCats: string[]) => void
+  onUpdateCategories: (newCats: string[]) => void,
+  onOpenAccountSettings: () => void
 }) => {
   const [newCat, setNewCat] = useState('');
   const defaultCategoryLookup = new Set(DEFAULT_CATEGORIES.map((cat) => cat.toLowerCase()));
@@ -624,6 +761,14 @@ const SettingsModal = ({
         
         <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
             <div className="space-y-4">
+              <button
+                type="button"
+                onClick={onOpenAccountSettings}
+                className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-black border border-border text-sm text-secondary hover:text-white hover:border-gray-500 transition-all"
+              >
+                <span className="font-semibold">Account Settings</span>
+                <ArrowUpRight size={16} />
+              </button>
                <div className="flex gap-2">
                  <input 
                    type="text"
@@ -1731,7 +1876,9 @@ export default function Page() {
   
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAccountSettingsOpen, setIsAccountSettingsOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [catalogTools, setCatalogTools] = useState<GlobalTool[]>([]);
@@ -1896,6 +2043,16 @@ export default function Page() {
     await saveUserProfile(user.uid, payload);
     setProfile(payload);
     setIsProfileSetupOpen(false);
+  };
+
+  const handleProfileClear = async () => {
+    if (!user) return;
+    const confirmed = window.confirm('Clear your profile info? You will be asked to enter your name again.');
+    if (!confirmed) return;
+    await clearUserProfile(user.uid);
+    setProfile(null);
+    setIsAccountSettingsOpen(false);
+    setIsProfileSetupOpen(true);
   };
 
   const loadCatalog = useCallback(async () => {
@@ -2257,6 +2414,19 @@ export default function Page() {
         onClose={() => setIsSettingsOpen(false)}
         categories={categories}
         onUpdateCategories={handleUpdateCategories}
+        onOpenAccountSettings={() => {
+          setIsSettingsOpen(false);
+          setIsAccountSettingsOpen(true);
+        }}
+      />
+
+      <AccountSettingsModal
+        isOpen={isAccountSettingsOpen}
+        email={user?.email || ''}
+        profile={profile}
+        onSave={handleProfileSave}
+        onClear={handleProfileClear}
+        onClose={() => setIsAccountSettingsOpen(false)}
       />
 
       <DeleteConfirmationModal

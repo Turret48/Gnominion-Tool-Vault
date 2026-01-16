@@ -10,6 +10,8 @@ import {
   getDocs,
   where,
   documentId,
+  updateDoc,
+  deleteField,
 } from 'firebase/firestore';
 import { db } from './firebase';
 import { Tool, UserTool, GlobalTool, ToolCatalogEntry, UserProfile } from '../types';
@@ -85,6 +87,18 @@ export const fetchUserProfile = async (userId: string) => {
     createdAt: data.createdAt,
     updatedAt: data.updatedAt
   };
+};
+
+export const clearUserProfile = async (userId: string) => {
+  if (!db) return;
+  const userRef = doc(db, 'users', userId);
+  await updateDoc(userRef, {
+    name: deleteField(),
+    company: deleteField(),
+    industry: deleteField(),
+    email: deleteField(),
+    updatedAt: Date.now()
+  });
 };
 
 export const saveUserProfile = async (userId: string, profile: UserProfile) => {
