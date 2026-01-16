@@ -490,38 +490,37 @@ const ProfileSetupModal = ({
   isOpen,
   email,
   initialProfile,
-  onSave
+  onSave,
+  onSkip
 }: {
   isOpen: boolean;
   email: string;
   initialProfile: UserProfile | null;
   onSave: (profile: UserProfile) => void;
+  onSkip: () => void;
 }) => {
-  const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [industry, setIndustry] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
-    setName(initialProfile?.name || '');
     setCompany(initialProfile?.company || '');
     setIndustry(initialProfile?.industry || '');
     setError('');
   }, [isOpen, initialProfile]);
 
-  const handleSave = () => {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      setError('Please enter a name to continue.');
-      return;
+  const handleSave = async () => {
+    try {
+      await onSave({
+        company: company.trim() || undefined,
+        industry: industry.trim() || undefined,
+        email
+      });
+    } catch (err) {
+      console.error('Failed to save profile', err);
+      setError('Could not save your profile. Please try again.');
     }
-    onSave({
-      name: trimmedName,
-      company: company.trim() || undefined,
-      industry: industry.trim() || undefined,
-      email
-    });
   };
 
   if (!isOpen) return null;
@@ -533,8 +532,8 @@ const ProfileSetupModal = ({
 
         <div className="flex flex-col gap-4">
           <div>
-            <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">Tell us about you</h3>
-            <p className="text-secondary text-sm">This helps personalize your vault.</p>
+            <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">Tell us about your work</h3>
+            <p className="text-secondary text-sm">Optional details to personalize your vault.</p>
           </div>
 
           {error && (
@@ -544,15 +543,6 @@ const ProfileSetupModal = ({
           )}
 
           <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Name *</label>
-              <input
-                className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
-              />
-            </div>
             <div>
               <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Company (optional)</label>
               <input
@@ -578,7 +568,14 @@ const ProfileSetupModal = ({
           </div>
 
           <p className="text-[11px] text-gray-500">You can change or add this information in the settings at any time.</p>
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={onSkip}
+              className="text-xs text-secondary hover:text-white transition-colors"
+            >
+              Skip
+            </button>
             <button
               type="button"
               onClick={handleSave}
@@ -621,18 +618,17 @@ const AccountSettingsModal = ({
     setError('');
   }, [isOpen, profile]);
 
-  const handleSave = () => {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      setError('Please enter a name to continue.');
-      return;
+  const handleSave = async () => {
+    try {
+      await onSave({
+        company: company.trim() || undefined,
+        industry: industry.trim() || undefined,
+        email
+      });
+    } catch (err) {
+      console.error('Failed to save profile', err);
+      setError('Could not save your profile. Please try again.');
     }
-    onSave({
-      name: trimmedName,
-      company: company.trim() || undefined,
-      industry: industry.trim() || undefined,
-      email
-    });
   };
 
   if (!isOpen) return null;
@@ -1889,6 +1885,7 @@ export default function Page() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [isProfileSetupOpen, setIsProfileSetupOpen] = useState(false);
+  const [profilePromptDismissed, setProfilePromptDismissed] = useState(false);
   
   const [selectedToolId, setSelectedToolId] = useState<string | null>(null);
   const [toolToDelete, setToolToDelete] = useState<Tool | null>(null);
@@ -1939,17 +1936,20 @@ export default function Page() {
 
     let isMounted = true;
     setProfileLoading(true);
+    const dismissedKey = `tool_vault_profile_prompt_dismissed_${user.uid}`;
+    const dismissed = localStorage.getItem(dismissedKey) === 'true';
+    setProfilePromptDismissed(dismissed);
+
     fetchUserProfile(user.uid)
       .then((data) => {
         if (!isMounted) return;
         setProfile(data);
-        const hasName = Boolean(data?.name && data.name.trim());
-        setIsProfileSetupOpen(!hasName);
+        setIsProfileSetupOpen(!dismissed);
       })
       .catch(() => {
         if (!isMounted) return;
         setProfile(null);
-        setIsProfileSetupOpen(true);
+        setIsProfileSetupOpen(!dismissed);
       })
       .finally(() => {
         if (!isMounted) return;
@@ -1962,14 +1962,14 @@ export default function Page() {
   }, [user]);
 
   useEffect(() => {
-    if (user && !profileLoading && !isProfileSetupOpen) {
+    if (user && !profileLoading) {
       // Show on every login for now (testing); still persist the flag.
       setOnboardingStep(0);
       setIsOnboardingOpen(true);
     } else {
       setIsOnboardingOpen(false);
     }
-  }, [user, profileLoading, isProfileSetupOpen]);
+  }, [user, profileLoading]);
 
   const persistOnboarding = (startMode: 'empty' | 'catalog') => {
     localStorage.setItem('tool_vault_onboarding_completed', 'true');
@@ -2036,12 +2036,29 @@ export default function Page() {
     if (!user) return;
     const payload: UserProfile = {
       ...nextProfile,
+      name: profile?.name || nextProfile.name || user.displayName || undefined,
       email: user.email || nextProfile.email || '',
       createdAt: profile?.createdAt || Date.now(),
       updatedAt: Date.now()
     };
-    await saveUserProfile(user.uid, payload);
-    setProfile(payload);
+    try {
+      await saveUserProfile(user.uid, payload);
+      const dismissedKey = `tool_vault_profile_prompt_dismissed_${user.uid}`;
+      localStorage.setItem(dismissedKey, 'true');
+      setProfilePromptDismissed(true);
+      setProfile(payload);
+      setIsProfileSetupOpen(false);
+    } catch (err) {
+      console.error('Failed to save profile', err);
+      throw err;
+    }
+  };
+
+  const handleProfileSkip = () => {
+    if (!user) return;
+    const dismissedKey = `tool_vault_profile_prompt_dismissed_${user.uid}`;
+    localStorage.setItem(dismissedKey, 'true');
+    setProfilePromptDismissed(true);
     setIsProfileSetupOpen(false);
   };
 
@@ -2247,17 +2264,6 @@ export default function Page() {
     return <LoginModal isOpen />;
   }
 
-  if (isProfileSetupOpen) {
-    return (
-      <ProfileSetupModal
-        isOpen
-        email={user.email || ''}
-        initialProfile={profile}
-        onSave={handleProfileSave}
-      />
-    );
-  }
-
   return (
     <div className="flex min-h-screen bg-black text-gray-200 font-sans selection:bg-primary/30">
       
@@ -2399,6 +2405,14 @@ export default function Page() {
           )}
         </div>
       </main>
+
+      <ProfileSetupModal
+        isOpen={isProfileSetupOpen}
+        email={user?.email || ''}
+        initialProfile={profile}
+        onSave={handleProfileSave}
+        onSkip={handleProfileSkip}
+      />
 
       <AddToolModal 
         isOpen={isAddModalOpen} 

@@ -114,7 +114,7 @@ export interface GlobalTool {
 
 
 export interface UserProfile {
-  name: string;
+  name?: string;
   company?: string;
   industry?: string;
   email?: string;
