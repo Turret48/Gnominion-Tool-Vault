@@ -2066,7 +2066,7 @@ export default function Page() {
     if (!user) return;
     const payload: UserProfile = {
       ...nextProfile,
-      name: profile?.name || nextProfile.name || user.displayName || undefined,
+      name: nextProfile.name || profile?.name || user.displayName || undefined,
       email: user.email || nextProfile.email || '',
       createdAt: profile?.createdAt || Date.now(),
       updatedAt: Date.now()
