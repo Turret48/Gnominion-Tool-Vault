@@ -87,7 +87,7 @@ export const handleAuth0Redirect = async (): Promise<User | null> => {
 
   try {
     const auth0User = await auth0.getUser();
-    const displayName = auth0User?.preferred_username || auth0User?.nickname || auth0User?.name;
+    const displayName = auth0User?.username || auth0User?.preferred_username || auth0User?.nickname || auth0User?.name;
     if (displayName && firebaseAuth.currentUser && firebaseAuth.currentUser.displayName !== displayName) {
       await updateProfile(firebaseAuth.currentUser, { displayName });
     }
