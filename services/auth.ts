@@ -3,7 +3,8 @@
   signInWithPopup, 
   signOut, 
   User,
-  signInWithCustomToken
+  signInWithCustomToken,
+  updateProfile
 } from "firebase/auth";
 import { auth } from "./firebase";
 import { getAuth0Client } from "./auth0Client";
@@ -83,6 +84,16 @@ export const handleAuth0Redirect = async (): Promise<User | null> => {
 
   const firebaseAuth = requireFirebaseAuth();
   await signInWithCustomToken(firebaseAuth, data.firebaseToken);
+
+  try {
+    const auth0User = await auth0.getUser();
+    const displayName = auth0User?.preferred_username || auth0User?.nickname || auth0User?.name;
+    if (displayName && firebaseAuth.currentUser && firebaseAuth.currentUser.displayName !== displayName) {
+      await updateProfile(firebaseAuth.currentUser, { displayName });
+    }
+  } catch (error) {
+    console.warn('Failed to sync display name from Auth0.', error);
+  }
 
   window.history.replaceState({}, document.title, window.location.pathname);
   return firebaseAuth.currentUser;

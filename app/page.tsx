@@ -275,7 +275,8 @@ const Sidebar = ({
   onImport,
   isOpen,
   onClose,
-  onOpenSettings
+  onOpenSettings,
+  userDisplayName
 }: { 
   categories: string[], 
   activeCategory: string, 
@@ -284,7 +285,8 @@ const Sidebar = ({
   onImport: (e: React.ChangeEvent<HTMLInputElement>) => void,
   isOpen: boolean,
   onClose: () => void,
-  onOpenSettings: () => void
+  onOpenSettings: () => void,
+  userDisplayName?: string
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
@@ -380,7 +382,7 @@ const Sidebar = ({
                    </div>
                  )}
                  <div className="flex-1 min-w-0">
-                   <p className="text-xs font-bold text-white truncate">{user.displayName || 'User'}</p>
+                   <p className="text-xs font-bold text-white truncate">{userDisplayName || user.displayName || 'User'}</p>
                    <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
                  </div>
                  <button 
@@ -2251,6 +2253,8 @@ export default function Page() {
 
   const selectedTool = useMemo(() => tools.find(t => t.id === selectedToolId), [tools, selectedToolId]);
 
+  const displayName = profile?.name || user?.displayName || 'User';
+
   const handleTagSelect = (tag: string) => {
     setSearchQuery(tag);
     setActiveCategory('All');
@@ -2276,6 +2280,7 @@ export default function Page() {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        userDisplayName={displayName}
       />
 
       <main className="ml-0 lg:ml-64 flex-1 flex flex-col h-screen overflow-hidden">
