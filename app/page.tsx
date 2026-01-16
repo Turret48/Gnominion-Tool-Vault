@@ -276,6 +276,7 @@ const Sidebar = ({
   isOpen,
   onClose,
   onOpenSettings,
+  onOpenAccountSettings,
   userDisplayName
 }: { 
   categories: string[], 
@@ -286,6 +287,7 @@ const Sidebar = ({
   isOpen: boolean,
   onClose: () => void,
   onOpenSettings: () => void,
+  onOpenAccountSettings: () => void,
   userDisplayName?: string
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -373,7 +375,7 @@ const Sidebar = ({
                <div className="flex items-center gap-3 p-2 rounded-lg bg-surface border border-border/50 mb-3 w-full">
                  <button
                    type="button"
-                   onClick={() => setIsAccountSettingsOpen(true)}
+                   onClick={onOpenAccountSettings}
                    className="flex items-center gap-3 flex-1 min-w-0 text-left hover:border-primary/40 transition-colors"
                    aria-label="Open Account Settings"
                  >
@@ -1322,7 +1324,7 @@ const ToolDetail = ({
       setIsDirty(false);
       setAdvancedMode(false);
     }
-  }, [tool, isEditing, adminMode]);
+  }, [tool, isEditing, adminMode, categories]);
 
   useEffect(() => {
     if (isEditing) {
@@ -2314,6 +2316,7 @@ export default function Page() {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenAccountSettings={() => setIsAccountSettingsOpen(true)}
         userDisplayName={displayName}
       />
 
