@@ -87,7 +87,8 @@ export const handleAuth0Redirect = async (): Promise<User | null> => {
 
   try {
     const auth0User = await auth0.getUser();
-    const displayName = auth0User?.username || auth0User?.preferred_username || auth0User?.nickname || auth0User?.name;
+    const usernameClaim = (claims && (claims['https://gnominion-tool-vault.vercel.app/username'] as string)) || (claims as any)?.username;
+    const displayName = usernameClaim || auth0User?.username || auth0User?.preferred_username || auth0User?.nickname || auth0User?.name;
     if (displayName && firebaseAuth.currentUser && firebaseAuth.currentUser.displayName !== displayName) {
       await updateProfile(firebaseAuth.currentUser, { displayName });
     }
