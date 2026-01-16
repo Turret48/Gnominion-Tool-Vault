@@ -400,28 +400,6 @@ const Sidebar = ({
                    <LogOut size={16} />
                  </button>
                </div>
-                   )}
-                   <div className="flex-1 min-w-0">
-                     <p className="text-xs font-bold text-white truncate">{userDisplayName || user.displayName || 'User'}</p>
-                     <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
-                   </div>
-                 </button>
-                 <button
-                   onClick={logOut}
-                   className="text-gray-500 hover:text-red-400 transition-colors p-2"
-                   title="Sign Out"
-                 >
-                   <LogOut size={16} />
-                 </button>
-               </div>
-                 <button 
-                   onClick={logOut} 
-                   className="text-gray-500 hover:text-red-400 transition-colors p-2"
-                   title="Sign Out"
-                 >
-                   <LogOut size={16} />
-                 </button>
-               </div>
              </>
            ) : null}
 
