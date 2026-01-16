@@ -492,29 +492,35 @@ const ProfileSetupModal = ({
   isOpen,
   email,
   initialProfile,
+  displayName,
   onSave,
   onSkip
 }: {
   isOpen: boolean;
   email: string;
   initialProfile: UserProfile | null;
+  displayName?: string;
   onSave: (profile: UserProfile) => void;
   onSkip: () => void;
 }) => {
+  const [name, setName] = useState('');
   const [company, setCompany] = useState('');
   const [industry, setIndustry] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
+    setName(initialProfile?.name || displayName || '');
     setCompany(initialProfile?.company || '');
     setIndustry(initialProfile?.industry || '');
     setError('');
-  }, [isOpen, initialProfile]);
+  }, [isOpen, initialProfile, displayName]);
 
   const handleSave = async () => {
     try {
+      const trimmedName = name.trim();
       await onSave({
+        name: trimmedName || undefined,
         company: company.trim() || undefined,
         industry: industry.trim() || undefined,
         email
@@ -545,6 +551,15 @@ const ProfileSetupModal = ({
           )}
 
           <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Display Name (optional)</label>
+              <input
+                className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Display name"
+              />
+            </div>
             <div>
               <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Company (optional)</label>
               <input
@@ -622,7 +637,9 @@ const AccountSettingsModal = ({
 
   const handleSave = async () => {
     try {
+      const trimmedName = name.trim();
       await onSave({
+        name: trimmedName || undefined,
         company: company.trim() || undefined,
         industry: industry.trim() || undefined,
         email
@@ -657,12 +674,12 @@ const AccountSettingsModal = ({
 
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Name *</label>
+              <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Display Name *</label>
               <input
                 className="w-full bg-black border border-border rounded-lg px-4 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Your name"
+                placeholder="Display name"
               />
             </div>
             <div>
@@ -1877,6 +1894,8 @@ export default function Page() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAccountSettingsOpen, setIsAccountSettingsOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  const [toast, setToast] = useState<{ message: string; tone?: 'success' | 'error' } | null>(null);
+  const [tagFilter, setTagFilter] = useState('');
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [catalogTools, setCatalogTools] = useState<GlobalTool[]>([]);
@@ -2050,6 +2069,7 @@ export default function Page() {
       setProfilePromptDismissed(true);
       setProfile(payload);
       setIsProfileSetupOpen(false);
+      showToast('Saved');
     } catch (err) {
       console.error('Failed to save profile', err);
       throw err;
@@ -2253,12 +2273,18 @@ export default function Page() {
 
   const selectedTool = useMemo(() => tools.find(t => t.id === selectedToolId), [tools, selectedToolId]);
 
-  const displayName = profile?.name || user?.displayName || 'User';
+  const showToast = (message: string, tone: 'success' | 'error' = 'success') => {
+    setToast({ message, tone });
+    window.setTimeout(() => setToast(null), 2000);
+  };
 
   const handleTagSelect = (tag: string) => {
+    setTagFilter(tag);
     setSearchQuery(tag);
     setActiveCategory('All');
   };
+
+  const displayName = profile?.name || user?.displayName || 'User';
 
   if (loading || profileLoading) {
     return null;
@@ -2300,7 +2326,10 @@ export default function Page() {
               type="text" 
               placeholder="Search..." 
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => {
+                setSearchQuery(e.target.value);
+                setTagFilter('');
+              }}
               className="w-full bg-surface border border-border rounded-full py-2 md:py-2.5 pl-11 pr-5 text-gray-200 focus:outline-none focus:border-primary/50 transition-all shadow-sm text-base md:text-sm"
             />
           </div>
@@ -2348,6 +2377,51 @@ export default function Page() {
                 <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded border border-primary/20 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span> Cloud Sync Active
                 </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                {(activeCategory !== 'All' || tagFilter || (!tagFilter && searchQuery)) && (
+                  <span className="text-[10px] uppercase tracking-wider text-gray-500">Filtered by</span>
+                )}
+                {(activeCategory !== 'All' || tagFilter || (!tagFilter && searchQuery)) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveCategory('All');
+                      setTagFilter('');
+                      setSearchQuery('');
+                    }}
+                    className="text-[10px] bg-black border border-border rounded-full px-2 py-1 text-secondary hover:text-white hover:border-primary/40 transition-colors"
+                  >
+                    Clear all <span className="ml-1">x</span>
+                  </button>
+                )}
+                {activeCategory !== 'All' && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategory('All')}
+                    className="text-[10px] bg-black border border-border rounded-full px-2 py-1 text-secondary hover:text-white hover:border-primary/40 transition-colors"
+                  >
+                    Category: {activeCategory} <span className="ml-1">x</span>
+                  </button>
+                )}
+                {tagFilter && (
+                  <button
+                    type="button"
+                    onClick={() => { setTagFilter(''); setSearchQuery(''); }}
+                    className="text-[10px] bg-black border border-border rounded-full px-2 py-1 text-secondary hover:text-white hover:border-primary/40 transition-colors"
+                  >
+                    Tag: {tagFilter} <span className="ml-1">x</span>
+                  </button>
+                )}
+                {!tagFilter && searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="text-[10px] bg-black border border-border rounded-full px-2 py-1 text-secondary hover:text-white hover:border-primary/40 transition-colors"
+                  >
+                    Search: {searchQuery} <span className="ml-1">x</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -2415,9 +2489,18 @@ export default function Page() {
         isOpen={isProfileSetupOpen}
         email={user?.email || ''}
         initialProfile={profile}
+        displayName={user?.displayName || profile?.name}
         onSave={handleProfileSave}
         onSkip={handleProfileSkip}
       />
+
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[90]">
+          <div className="px-4 py-2 rounded-full text-xs font-semibold bg-black border border-border text-white shadow-lg">
+            {toast.message}
+          </div>
+        </div>
+      )}
 
       <AddToolModal 
         isOpen={isAddModalOpen} 

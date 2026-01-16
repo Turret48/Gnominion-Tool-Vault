@@ -104,7 +104,13 @@ export const clearUserProfile = async (userId: string) => {
 export const saveUserProfile = async (userId: string, profile: UserProfile) => {
   if (!db) return;
   const userRef = doc(db, 'users', userId);
-  await setDoc(userRef, profile, { merge: true });
+  const cleaned: Record<string, unknown> = {};
+  Object.entries(profile).forEach(([key, value]) => {
+    if (value !== undefined) {
+      cleaned[key] = value;
+    }
+  });
+  await setDoc(userRef, cleaned, { merge: true });
 };
 
 export const subscribeToCategories = (
