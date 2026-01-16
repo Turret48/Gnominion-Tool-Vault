@@ -370,21 +370,50 @@ const Sidebar = ({
         <div className="p-4 border-t border-border bg-black/50">
            {user ? (
              <>
-               <div className="flex items-center gap-3 p-2 rounded-lg bg-surface border border-border/50 mb-3">
-                 {user.photoURL ? (
-                   <>
-                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                     <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-border" />
-                   </>
-                 ) : (
-                   <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                     <UserIcon size={14} />
+               <div className="flex items-center gap-3 p-2 rounded-lg bg-surface border border-border/50 mb-3 w-full">
+                 <button
+                   type="button"
+                   onClick={() => setIsAccountSettingsOpen(true)}
+                   className="flex items-center gap-3 flex-1 min-w-0 text-left hover:border-primary/40 transition-colors"
+                   aria-label="Open Account Settings"
+                 >
+                   {user.photoURL ? (
+                     <>
+                       {/* eslint-disable-next-line @next/next/no-img-element */}
+                       <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full border border-border" />
+                     </>
+                   ) : (
+                     <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary">
+                       <UserIcon size={14} />
+                     </div>
+                   )}
+                   <div className="flex-1 min-w-0">
+                     <p className="text-xs font-bold text-white truncate">{userDisplayName || user.displayName || 'User'}</p>
+                     <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
                    </div>
-                 )}
-                 <div className="flex-1 min-w-0">
-                   <p className="text-xs font-bold text-white truncate">{userDisplayName || user.displayName || 'User'}</p>
-                   <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
-                 </div>
+                 </button>
+                 <button
+                   onClick={logOut}
+                   className="text-gray-500 hover:text-red-400 transition-colors p-2"
+                   title="Sign Out"
+                 >
+                   <LogOut size={16} />
+                 </button>
+               </div>
+                   )}
+                   <div className="flex-1 min-w-0">
+                     <p className="text-xs font-bold text-white truncate">{userDisplayName || user.displayName || 'User'}</p>
+                     <p className="text-[10px] text-gray-500 truncate">{user.email}</p>
+                   </div>
+                 </button>
+                 <button
+                   onClick={logOut}
+                   className="text-gray-500 hover:text-red-400 transition-colors p-2"
+                   title="Sign Out"
+                 >
+                   <LogOut size={16} />
+                 </button>
+               </div>
                  <button 
                    onClick={logOut} 
                    className="text-gray-500 hover:text-red-400 transition-colors p-2"
@@ -2069,6 +2098,7 @@ export default function Page() {
       setProfilePromptDismissed(true);
       setProfile(payload);
       setIsProfileSetupOpen(false);
+      setIsAccountSettingsOpen(false);
       showToast('Saved');
     } catch (err) {
       console.error('Failed to save profile', err);
