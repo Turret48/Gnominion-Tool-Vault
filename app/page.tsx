@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
   Search, Plus, X, LayoutGrid, List as ListIcon, Database, ArrowUpRight, Hash, Tag, 
-  Check, Save, Trash2, Download, Upload, Cpu, Zap, PenTool, BarChart2, AlertTriangle, Menu,
+  Check, Save, Trash2, Download, Upload, Cpu, Zap, PenTool, Pencil, BarChart2, AlertTriangle, Menu,
   Settings, LogOut, User as UserIcon, BookOpen, Users, FileText, ClipboardList, CalendarClock, Code
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -1015,7 +1015,7 @@ const AddToolModal = ({
     onClose();
   };
 
-  const addTag = (e: React.KeyboardEvent) => {
+  const addTag = async (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && newTag.trim()) {
       e.preventDefault();
       const currentTags = draftTool.tags || [];
@@ -1217,44 +1217,27 @@ const NoteSection = ({
   title,
   value,
   field,
-  isEditing,
-  canEditAdvanced,
-  onChange
+  onChange,
+  onBlur
 }: {
   title: string;
   value: string;
   field: keyof Tool['notes'];
-  isEditing: boolean;
-  canEditAdvanced: boolean;
   onChange: (field: keyof Tool['notes'], value: string) => void;
+  onBlur: (field: keyof Tool['notes'], value: string) => void;
 }) => (
   <div className="mb-10 group">
     <h3 className="text-xs font-bold text-secondary uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-border/50 pb-2">
       {title}
     </h3>
-    {(isEditing && (field !== 'whatItDoes' || canEditAdvanced)) ? (
-      <>
-        <textarea
-          className="w-full min-h-[120px] bg-black border border-border rounded-xl p-4 text-gray-300 leading-relaxed focus:border-primary focus:outline-none transition-colors resize-none font-mono text-base md:text-sm"
-          value={value}
-          onChange={(e) => onChange(field, e.target.value)}
-          placeholder="Supports Markdown (e.g. **bold**, [link](url), - list)"
-        />
-        <p className="text-[10px] text-gray-600 mt-1 flex justify-end">Markdown Supported</p>
-      </>
-    ) : (
-      <div className="text-gray-300 leading-relaxed text-[15px] markdown-body">
-        {value ? (
-          <ReactMarkdown components={{
-            a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" />
-          }}>
-            {value}
-          </ReactMarkdown>
-        ) : (
-          <span className="text-gray-600 italic">No notes added yet.</span>
-        )}
-      </div>
-    )}
+    <textarea
+      className="w-full min-h-[120px] bg-black border border-border rounded-xl p-4 text-gray-300 leading-relaxed focus:border-primary focus:outline-none transition-colors resize-none font-mono text-base md:text-sm"
+      value={value}
+      onChange={(e) => onChange(field, e.target.value)}
+      onBlur={(e) => onBlur(field, e.target.value)}
+      placeholder="Supports Markdown (e.g. **bold**, [link](url), - list)"
+    />
+    <p className="text-[10px] text-gray-600 mt-1 flex justify-end">Markdown Supported</p>
   </div>
 );
 
@@ -1270,27 +1253,30 @@ const ToolDetail = ({
 }: { 
   tool: Tool, 
   onClose: () => void, 
-  onUpdate: (t: Tool) => void, 
+  onUpdate: (t: Tool) => Promise<void>, 
   onRequestDelete: (id: string) => void,
   categories: string[],
   isAdmin: boolean,
   onAddToCatalog: (toolId: string) => void,
   onTagSelect: (tag: string) => void
 }) => {
-  const [isEditing, setIsEditing] = useState(false);
   const [adminMode, setAdminMode] = useState(false);
-  const [advancedMode, setAdvancedMode] = useState(false);
   const [noteDrafts, setNoteDrafts] = useState(EMPTY_NOTES);
   const [showLogoPreview, setShowLogoPreview] = useState(false);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [editedTool, setEditedTool] = useState<Tool>(tool);
   const [newTag, setNewTag] = useState('');
-  const [isDirty, setIsDirty] = useState(false);
-  const [showUnsavedPrompt, setShowUnsavedPrompt] = useState(false);
-  const [pendingAction, setPendingAction] = useState<'close' | 'cancel' | null>(null);
+  const [editingField, setEditingField] = useState<null | 'name' | 'summary' | 'pricing' | 'bestUseCases' | 'url'>(null);
+  const [fieldDrafts, setFieldDrafts] = useState({
+    name: tool.name || '',
+    summary: tool.summary || '',
+    pricingBucket: tool.pricingBucket || PricingBucket.UNKNOWN,
+    pricingNotes: tool.pricingNotes || '',
+    bestUseCases: (tool.bestUseCases || []).map((item) => `- ${item}`).join('\n'),
+    url: tool.url || ''
+  });
   const lastToolIdRef = useRef<string | null>(null);
-  const canEditAdvanced = isEditing && advancedMode;
-  const canEditGlobal = isAdmin && adminMode && canEditAdvanced;
+  const canEditGlobal = isAdmin && adminMode;
 
   useEffect(() => {
     if (!categories.length) return;
@@ -1300,37 +1286,22 @@ const ToolDetail = ({
   }, [categories, editedTool.category]);
 
   useEffect(() => {
-    if (lastToolIdRef.current !== tool.id) {
-      const normalizedNotes = { ...EMPTY_NOTES, ...(tool.notes || {}) };
-      lastToolIdRef.current = tool.id;
-      setEditedTool({ ...tool, notes: normalizedNotes });
-      setNoteDrafts(normalizedNotes);
-      if (tool.category && !categories.includes(tool.category)) {
-        setEditedTool((prev) => ({ ...prev, category: categories[0] || 'Productivity' }));
-      }
-      setIsEditing(false);
-      setAdminMode(false);
-      setAdvancedMode(false);
-      setIsDirty(false);
-      setShowUnsavedPrompt(false);
-      setPendingAction(null);
-      return;
+    const normalizedNotes = { ...EMPTY_NOTES, ...(tool.notes || {}) };
+    lastToolIdRef.current = tool.id;
+    setEditedTool({ ...tool, notes: normalizedNotes });
+    setNoteDrafts(normalizedNotes);
+    setFieldDrafts({
+      name: tool.name || '',
+      summary: tool.summary || '',
+      pricingBucket: tool.pricingBucket || PricingBucket.UNKNOWN,
+      pricingNotes: tool.pricingNotes || '',
+      bestUseCases: (tool.bestUseCases || []).map((item) => `- ${item}`).join('\n'),
+      url: tool.url || ''
+    });
+    if (tool.category && !categories.includes(tool.category)) {
+      setEditedTool((prev) => ({ ...prev, category: categories[0] || 'Productivity' }));
     }
-
-    if (!isEditing && !adminMode) {
-      const normalizedNotes = { ...EMPTY_NOTES, ...(tool.notes || {}) };
-      setEditedTool({ ...tool, notes: normalizedNotes });
-      setNoteDrafts(normalizedNotes);
-      setIsDirty(false);
-      setAdvancedMode(false);
-    }
-  }, [tool, isEditing, adminMode, categories]);
-
-  useEffect(() => {
-    if (isEditing) {
-      setNoteDrafts({ ...EMPTY_NOTES, ...(editedTool.notes || {}) });
-    }
-  }, [isEditing, editedTool.notes]);
+  }, [tool, categories]);
 
 
   const updateEditedTool = (updater: (prev: Tool) => Tool) => {
@@ -1338,7 +1309,6 @@ const ToolDetail = ({
       const next = updater(prev);
       return next;
     });
-    setIsDirty(true);
   };
 
   const updateNotes = (field: keyof Tool['notes'], value: string) => {
@@ -1346,7 +1316,104 @@ const ToolDetail = ({
       ...prev,
       [field]: value
     }));
-    setIsDirty(true);
+  };
+
+  const saveNote = async (field: keyof Tool['notes'], value: string) => {
+    const nextNotes = { ...noteDrafts, [field]: value };
+    const nextTool = { ...editedTool, notes: { ...EMPTY_NOTES, ...nextNotes }, updatedAt: Date.now() };
+    setEditedTool(nextTool);
+    try {
+      await onUpdate(nextTool);
+    } catch (err) {
+      console.error('Failed to save note', err);
+    }
+  };
+
+  const applyFieldUpdate = (field: keyof Tool, value: any, overrideKey?: string) => {
+    let nextTool: Tool;
+    if (canEditGlobal) {
+      nextTool = { ...editedTool, [field]: value };
+    } else {
+      nextTool = {
+        ...editedTool,
+        [field]: value,
+        overrides: {
+          ...(editedTool.overrides || {}),
+          [(overrideKey || field) as string]: value
+        }
+      };
+    }
+    setEditedTool(nextTool);
+    return nextTool;
+  };
+
+  const saveField = async (field: 'name' | 'summary' | 'pricing' | 'bestUseCases' | 'url') => {
+    let nextTool = editedTool;
+    let globalPayload: Record<string, unknown> | null = null;
+
+    if (field == 'name') {
+      const value = fieldDrafts.name.trim();
+      nextTool = applyFieldUpdate('name', value);
+      globalPayload = { name: value };
+    }
+
+    if (field == 'summary') {
+      const value = fieldDrafts.summary.trim();
+      nextTool = applyFieldUpdate('summary', value);
+      globalPayload = { summary: value };
+    }
+
+    if (field == 'pricing') {
+      nextTool = applyFieldUpdate('pricingBucket', fieldDrafts.pricingBucket);
+      nextTool = applyFieldUpdate('pricingNotes', fieldDrafts.pricingNotes.trim());
+      globalPayload = { pricingBucket: fieldDrafts.pricingBucket, pricingNotes: fieldDrafts.pricingNotes.trim() };
+    }
+
+    if (field == 'bestUseCases') {
+      const list = fieldDrafts.bestUseCases
+        .split('\n')
+        .map((item) => item.replace(/^[-*]\s*/, '').trim())
+        .filter(Boolean);
+      nextTool = applyFieldUpdate('bestUseCases', list);
+      globalPayload = { bestUseCases: list };
+    }
+
+    if (field == 'url') {
+      const value = fieldDrafts.url?.trim() || '';
+      nextTool = applyFieldUpdate('url', value, 'websiteUrl');
+      globalPayload = { websiteUrl: value };
+    }
+
+    try {
+      await onUpdate(nextTool);
+      if (isAdmin && adminMode && globalPayload) {
+        await updateGlobalTool(editedTool.id, globalPayload);
+      }
+    } catch (err) {
+      console.error('Failed to save field', err);
+    } finally {
+      setEditingField(null);
+    }
+  };
+
+  const handleCategoryChange = async (value: string) => {
+    const nextTool = { ...editedTool, category: value, updatedAt: Date.now() };
+    setEditedTool(nextTool);
+    try {
+      await onUpdate(nextTool);
+    } catch (err) {
+      console.error('Failed to update category', err);
+    }
+  };
+
+  const handleStatusChange = async (value: ToolStatus) => {
+    const nextTool = { ...editedTool, status: value, updatedAt: Date.now() };
+    setEditedTool(nextTool);
+    try {
+      await onUpdate(nextTool);
+    } catch (err) {
+      console.error('Failed to update status', err);
+    }
   };
 
   const getLogoDevUrl = (websiteUrl: string) => {
@@ -1392,93 +1459,35 @@ const ToolDetail = ({
     }));
   };
 
-  const requestClose = () => {
-    if (isDirty) {
-      setPendingAction('close');
-      setShowUnsavedPrompt(true);
-      return;
-    }
-    onClose();
-  };
-
-  const requestCancelEdit = () => {
-    if (isDirty) {
-      setPendingAction('cancel');
-      setShowUnsavedPrompt(true);
-      return;
-    }
-    setIsEditing(false);
-    setAdminMode(false);
-    setAdvancedMode(false);
-    setEditedTool({ ...tool, notes: { ...EMPTY_NOTES, ...(tool.notes || {}) } });
-  };
-
-  const discardEdits = () => {
-    setShowUnsavedPrompt(false);
-    setIsDirty(false);
-    const action = pendingAction;
-    setPendingAction(null);
-    setIsEditing(false);
-    setAdminMode(false);
-    setAdvancedMode(false);
-    setEditedTool({ ...tool, notes: { ...EMPTY_NOTES, ...(tool.notes || {}) } });
-    if (action == 'close') {
-      onClose();
-    }
-  };
-
-  const handleSave = async () => {
-    if (canEditGlobal) {
-      const confirmed = window.confirm('These edits will affect this tool for all users. Proceed?');
-      if (!confirmed) {
-        return;
-      }
-    }
-
-    const nextTool = {
-      ...editedTool,
-      category: normalizeCategory(editedTool.category || categories[0] || 'Productivity'),
-      notes: { ...EMPTY_NOTES, ...noteDrafts },
-      updatedAt: Date.now()
-    };
-    onUpdate(nextTool);
-    setIsDirty(false);
-
-    if (isAdmin && adminMode) {
-      try {
-        await updateGlobalTool(editedTool.id, {
-          name: editedTool.name,
-          summary: editedTool.summary,
-          pricingBucket: editedTool.pricingBucket,
-          pricingNotes: editedTool.pricingNotes,
-          bestUseCases: editedTool.bestUseCases,
-          integrations: editedTool.integrations,
-          logoUrl: editedTool.logoUrl,
-          websiteUrl: editedTool.url,
-          whatItDoes: noteDrafts.whatItDoes
-        });
-      } catch (error: any) {
-        alert(error?.message || 'Failed to update global tool.');
-      }
-    }
-
-    setIsEditing(false);
-    setAdvancedMode(false);
-  };
-
-  const addTag = (e: React.KeyboardEvent) => {
+  const addTag = async (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && newTag.trim()) {
       e.preventDefault();
       const currentTags = editedTool.tags || [];
       if (!currentTags.includes(newTag.trim())) {
-        setEditedTool({ ...editedTool, tags: [...currentTags, newTag.trim()] });
+        const nextTool = { ...editedTool, tags: [...currentTags, newTag.trim()], updatedAt: Date.now() };
+        setEditedTool(nextTool);
+        try {
+          await onUpdate(nextTool);
+        } catch (err) {
+          console.error('Failed to add tag', err);
+        }
       }
       setNewTag('');
     }
   };
 
-  const removeTag = (tagToRemove: string) => {
-    updateEditedTool((prev) => ({ ...prev, tags: prev.tags.filter((t) => t !== tagToRemove) }));
+  const removeTag = async (tagToRemove: string) => {
+    const nextTool = {
+      ...editedTool,
+      tags: editedTool.tags.filter((t) => t !== tagToRemove),
+      updatedAt: Date.now()
+    };
+    setEditedTool(nextTool);
+    try {
+      await onUpdate(nextTool);
+    } catch (err) {
+      console.error('Failed to remove tag', err);
+    }
   };
 
   return (
@@ -1489,7 +1498,7 @@ const ToolDetail = ({
       />
       <div className="w-full md:max-w-3xl h-full bg-surface border-l border-border shadow-2xl overflow-hidden flex flex-col pointer-events-auto relative transform transition-transform duration-300 ease-out animate-slide-in-right">
         <div className="absolute top-6 right-4 md:right-6 flex items-center gap-2 z-10">
-          {isAdmin && isEditing && (
+          {isAdmin && (
             <button
               type="button"
               onClick={() => setAdminMode((prev) => !prev)}
@@ -1518,47 +1527,19 @@ const ToolDetail = ({
               </span>
             </button>
           )}
-          {isEditing ? (
-            <>
-              <button 
-                onClick={requestCancelEdit}
-                className="p-2.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
-                title="Cancel"
-              >
-                <X size={18} />
-              </button>
-              <button 
-                onClick={handleSave}
-                className="p-2.5 rounded-full bg-primary text-white hover:bg-primaryHover transition-all shadow-lg shadow-primary/20"
-                title="Save"
-              >
-                <Save size={18} />
-              </button>
-            </>
-          ) : (
-            <>
-              <button 
-                onClick={() => setIsEditing(true)}
-                className="p-2.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
-                title="Edit Tool"
-              >
-                <PenTool size={18} />
-              </button>
-              <button 
-                onClick={() => onRequestDelete(tool.id)}
-                className="p-2.5 rounded-full bg-black border border-border text-red-400 hover:text-red-300 hover:border-red-900/50 transition-all"
-                title="Delete Tool"
-              >
-                <Trash2 size={18} />
-              </button>
-              <button 
-                onClick={requestClose}
-                className="p-2.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all ml-2"
-              >
-                <X size={18} />
-              </button>
-            </>
-          )}
+          <button 
+            onClick={() => onRequestDelete(tool.id)}
+            className="p-2.5 rounded-full bg-black border border-border text-red-400 hover:text-red-300 hover:border-red-900/50 transition-all"
+            title="Delete Tool"
+          >
+            <Trash2 size={18} />
+          </button>
+          <button 
+            onClick={onClose}
+            className="p-2.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all ml-2"
+          >
+            <X size={18} />
+          </button>
         </div>
 
         <div className="overflow-y-auto h-full p-6 md:p-10 custom-scrollbar">
@@ -1570,61 +1551,94 @@ const ToolDetail = ({
                  </div>
               </div>
               <div className="w-full pt-1">
-                {canEditAdvanced ? (
-                   <input 
-                    className="text-4xl md:text-5xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none w-full mb-3 pb-2"
-                    value={editedTool.name}
-                    onChange={(e) => setField('name', e.target.value)}
-                   />
-                ) : (
-                   <h1 className="text-4xl md:text-5xl font-bold text-white mb-3 tracking-tight">{editedTool.name}</h1>
-                )}
+                <div className="flex items-center gap-3 mb-3">
+                  {editingField === 'name' ? (
+                    <>
+                      <input
+                        className="flex-1 text-4xl md:text-5xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none pb-2"
+                        value={fieldDrafts.name}
+                        onChange={(e) => setFieldDrafts({ ...fieldDrafts, name: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => saveField('name')}
+                        className="p-2 rounded-full bg-primary text-white hover:bg-primaryHover transition-all"
+                        title="Save name"
+                      >
+                        <Check size={16} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">{editedTool.name}</h1>
+                      <button
+                        type="button"
+                        onClick={() => setEditingField('name')}
+                        className="p-2 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
+                        title="Edit name"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    </>
+                  )}
+                </div>
                 <div className="flex flex-wrap items-center gap-3 text-sm">
-                   {isEditing ? (
-                      <>
-                        <select 
-                          className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
-                          value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
-                          onChange={(e) => updateEditedTool((prev) => ({ ...prev, category: e.target.value }))}
-                        >
-                          {categories.map((c) => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                        </select>
-                      </>
-                   ) : (
-                      <span className="px-3 py-1 rounded-full bg-primary/10 text-primary border border-primary/20 font-medium">{categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}</span>
-                   )}
+                   <select 
+                     className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                     value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
+                     onChange={(e) => handleCategoryChange(e.target.value)}
+                   >
+                     {categories.map((c) => (
+                       <option key={c} value={c}>{c}</option>
+                     ))}
+                   </select>
                    
-                   {isEditing ? (
-                     <select 
-                       className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
-                       value={editedTool.status || ToolStatus.INTERESTED}
-                       onChange={(e) => updateEditedTool((prev) => ({ ...prev, status: e.target.value as ToolStatus }))}
-                     >
-                       {Object.values(ToolStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                     </select>
-                   ) : (
-                     <span className={`px-2.5 py-0.5 rounded-full border text-xs font-bold ${getStatusStyles(editedTool.status)}`}>
-                       {editedTool.status || ToolStatus.INTERESTED}
-                     </span>
-                   )}
+                   <select 
+                     className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                     value={editedTool.status || ToolStatus.INTERESTED}
+                     onChange={(e) => handleStatusChange(e.target.value as ToolStatus)}
+                   >
+                     {Object.values(ToolStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                   </select>
 
                    <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
-                   {canEditAdvanced ? (
-                      <input 
-                        className="bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none w-full mt-2 md:mt-0 text-base md:text-sm"
-                        value={editedTool.url}
-                        onChange={(e) => setField('url', e.target.value, 'websiteUrl')}
-                      />
+                   {editingField === 'url' ? (
+                      <div className="flex items-center gap-2 w-full mt-2 md:mt-0">
+                        <input 
+                          className="flex-1 bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none text-base md:text-sm"
+                          value={fieldDrafts.url}
+                          onChange={(e) => setFieldDrafts({ ...fieldDrafts, url: e.target.value })}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => saveField('url')}
+                          className="p-2 rounded-full bg-primary text-white hover:bg-primaryHover transition-all"
+                          title="Save URL"
+                        >
+                          <Check size={14} />
+                        </button>
+                      </div>
                    ) : (
-                      <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group">
-                        {editedTool.url.replace(/^https?:\/\//, '').replace(/\/$/, '')} 
-                        <ArrowUpRight size={14} className="group-hover:text-primary transition-colors"/>
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group">
+                          {editedTool.url.replace(/^https?:\/\//, '').replace(/\/$/, '')} 
+                          <ArrowUpRight size={14} className="group-hover:text-primary transition-colors"/>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFieldDrafts({ ...fieldDrafts, url: editedTool.url });
+                            setEditingField('url');
+                          }}
+                          className="p-2 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
+                          title="Edit URL"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </div>
                    )}
                 </div>
-                {isAdmin && canEditAdvanced && (
+                {isAdmin && adminMode && (
                   <div className="mt-4">
                     <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Logo URL</label>
                     <div className="flex flex-col gap-2">
@@ -1647,67 +1661,120 @@ const ToolDetail = ({
                 )}
               </div>
             </div>
-            {canEditAdvanced ? (
-               <textarea
-                  className="w-full bg-black border border-border rounded-lg p-4 text-xl text-gray-300"
-                  value={editedTool.summary}
-                  onChange={(e) => setField('summary', e.target.value)}
-                />
-            ) : (
-              <p className="text-xl md:text-2xl text-gray-200 font-light leading-relaxed">
-                {editedTool.summary}
-              </p>
-            )}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                {editingField === 'summary' ? (
+                  <textarea
+                    className="w-full bg-black border border-border rounded-lg p-4 text-xl text-gray-300 focus:border-primary focus:outline-none transition-colors"
+                    value={fieldDrafts.summary}
+                    onChange={(e) => setFieldDrafts({ ...fieldDrafts, summary: e.target.value })}
+                  />
+                ) : (
+                  <p className="text-xl md:text-2xl text-gray-200 font-light leading-relaxed">
+                    {editedTool.summary}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (editingField === 'summary') {
+                    saveField('summary');
+                    return;
+                  }
+                  setFieldDrafts({ ...fieldDrafts, summary: editedTool.summary || '' });
+                  setEditingField('summary');
+                }}
+                className="p-2 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all h-9 w-9 flex items-center justify-center"
+                title={editingField === 'summary' ? 'Save summary' : 'Edit summary'}
+              >
+                {editingField === 'summary' ? <Check size={14} /> : <Pencil size={14} />}
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="p-6 rounded-2xl bg-black border border-border">
-              <div className="text-xs font-bold text-secondary uppercase tracking-widest mb-2">Pricing</div>
-              {canEditAdvanced ? (
-                <select
-                  className="w-full bg-black border border-border rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm mb-3"
-                  value={editedTool.pricingBucket || PricingBucket.UNKNOWN}
-                  onChange={(e) =>
-                    setField('pricingBucket', e.target.value as PricingBucket)
-                  }
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs font-bold text-secondary uppercase tracking-widest">Pricing</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (editingField === 'pricing') {
+                      saveField('pricing');
+                      return;
+                    }
+                    setFieldDrafts({
+                      ...fieldDrafts,
+                      pricingBucket: editedTool.pricingBucket || PricingBucket.UNKNOWN,
+                      pricingNotes: editedTool.pricingNotes || ''
+                    });
+                    setEditingField('pricing');
+                  }}
+                  className="p-2 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
+                  title={editingField === 'pricing' ? 'Save pricing' : 'Edit pricing'}
                 >
-                  {Object.values(PricingBucket).map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
+                  {editingField === 'pricing' ? <Check size={14} /> : <Pencil size={14} />}
+                </button>
+              </div>
+              {editingField === 'pricing' ? (
+                <>
+                  <select
+                    className="w-full bg-black border border-border rounded-lg px-3 py-2 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm mb-3"
+                    value={fieldDrafts.pricingBucket}
+                    onChange={(e) =>
+                      setFieldDrafts({ ...fieldDrafts, pricingBucket: e.target.value as PricingBucket })
+                    }
+                  >
+                    {Object.values(PricingBucket).map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                  <textarea
+                    className="w-full min-h-[140px] bg-black border border-border rounded-lg px-3 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm resize-none"
+                    placeholder="Pricing notes"
+                    value={fieldDrafts.pricingNotes}
+                    onChange={(e) =>
+                      setFieldDrafts({ ...fieldDrafts, pricingNotes: e.target.value })
+                    }
+                  />
+                </>
               ) : (
-                <div className="text-white font-semibold text-lg mb-1">{editedTool.pricingBucket}</div>
-              )}
-              {canEditAdvanced ? (
-                <textarea
-                  className="w-full min-h-[120px] bg-black border border-border rounded-lg px-3 py-3 text-white focus:border-primary focus:outline-none transition-colors text-base md:text-sm resize-none"
-                  placeholder="Pricing notes"
-                  value={editedTool.pricingNotes || ''}
-                  onChange={(e) =>
-                    setField('pricingNotes', e.target.value)
-                  }
-                />
-              ) : (
-                <div className="text-sm text-gray-500">{editedTool.pricingNotes || "No details provided"}</div>
+                <>
+                  <div className="text-white font-semibold text-lg mb-1">{editedTool.pricingBucket}</div>
+                  <div className="text-sm text-gray-500">{editedTool.pricingNotes || 'No details provided'}</div>
+                </>
               )}
             </div>
             <div className="md:col-span-2 p-6 rounded-2xl bg-black border border-border">
-              <div className="text-xs font-bold text-secondary uppercase tracking-widest mb-4">Best Use Cases</div>
-              {canEditAdvanced ? (
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-xs font-bold text-secondary uppercase tracking-widest">Best Use Cases</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (editingField === 'bestUseCases') {
+                      saveField('bestUseCases');
+                      return;
+                    }
+                    setFieldDrafts({
+                      ...fieldDrafts,
+                      bestUseCases: (editedTool.bestUseCases || []).map((item) => `- ${item}`).join('\n')
+                    });
+                    setEditingField('bestUseCases');
+                  }}
+                  className="p-2 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
+                  title={editingField === 'bestUseCases' ? 'Save best use cases' : 'Edit best use cases'}
+                >
+                  {editingField === 'bestUseCases' ? <Check size={14} /> : <Pencil size={14} />}
+                </button>
+              </div>
+              {editingField === 'bestUseCases' ? (
                 <textarea
-                  className="w-full min-h-[140px] bg-black border border-border rounded-lg p-3 text-gray-300 focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
+                  className="w-full min-h-[160px] bg-black border border-border rounded-lg p-3 text-gray-300 focus:border-primary focus:outline-none transition-colors text-base md:text-sm"
                   placeholder="- One use case per line"
-                  value={editedTool.bestUseCases.map((item) => `- ${item}`).join('\n')}
-                  onChange={(e) =>
-                    setEditedTool({
-                      ...editedTool,
-                      bestUseCases: e.target.value
-                        .split('\n')
-                        .map((line) => line.replace(/^[-*]\s*/, '').trim())
-                        .filter(Boolean)
-                    })
-                  }
+                  value={fieldDrafts.bestUseCases}
+                  onChange={(e) => setFieldDrafts({ ...fieldDrafts, bestUseCases: e.target.value })}
                 />
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1727,54 +1794,48 @@ const ToolDetail = ({
             </div>
           </div>
           <div className="space-y-2">
-             <NoteSection title="What it does" value={isEditing ? noteDrafts.whatItDoes : editedTool.notes.whatItDoes} field="whatItDoes" isEditing={isEditing} canEditAdvanced={canEditAdvanced} onChange={updateNotes} />
-             <NoteSection title="When to use" value={isEditing ? noteDrafts.whenToUse : editedTool.notes.whenToUse} field="whenToUse" isEditing={isEditing} canEditAdvanced={canEditAdvanced} onChange={updateNotes} />
-             <NoteSection title="How to use" value={isEditing ? noteDrafts.howToUse : editedTool.notes.howToUse} field="howToUse" isEditing={isEditing} canEditAdvanced={canEditAdvanced} onChange={updateNotes} />
-             <NoteSection title="Gotchas & Limits" value={isEditing ? noteDrafts.gotchas : editedTool.notes.gotchas} field="gotchas" isEditing={isEditing} canEditAdvanced={canEditAdvanced} onChange={updateNotes} />
-             <NoteSection title="Links & References" value={isEditing ? noteDrafts.links : editedTool.notes.links} field="links" isEditing={isEditing} canEditAdvanced={canEditAdvanced} onChange={updateNotes} />
+             <NoteSection title="What it does" value={noteDrafts.whatItDoes} field="whatItDoes" onChange={updateNotes} onBlur={saveNote} />
+             <NoteSection title="When to use" value={noteDrafts.whenToUse} field="whenToUse" onChange={updateNotes} onBlur={saveNote} />
+             <NoteSection title="How to use" value={noteDrafts.howToUse} field="howToUse" onChange={updateNotes} onBlur={saveNote} />
+             <NoteSection title="Gotchas & Limits" value={noteDrafts.gotchas} field="gotchas" onChange={updateNotes} onBlur={saveNote} />
+             <NoteSection title="Links & References" value={noteDrafts.links} field="links" onChange={updateNotes} onBlur={saveNote} />
           </div>
           <div className="mt-12 pt-8 border-t border-border flex flex-col gap-4">
-             {isEditing && (
-                <input 
-                  className="bg-transparent border-b border-border text-base md:text-sm text-white focus:border-primary focus:outline-none w-full py-2"
-                  placeholder="Type new tag and press Enter..."
-                  value={newTag}
-                  onChange={e => setNewTag(e.target.value)}
-                  onKeyDown={addTag}
-                />
-             )}
-             <div className="flex flex-wrap gap-2">
+            <input
+              className="bg-transparent border-b border-border text-base md:text-sm text-white focus:border-primary focus:outline-none w-full py-2"
+              placeholder="Type new tag and press Enter..."
+              value={newTag}
+              onChange={e => setNewTag(e.target.value)}
+              onKeyDown={addTag}
+            />
+            <div className="flex flex-wrap gap-2">
               {editedTool.tags.map(tag => (
-                isEditing ? (
-                  <span key={tag} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black border border-border text-xs font-medium text-secondary">
-                    <Tag size={12} /> {tag}
-                    <button onClick={() => removeTag(tag)} className="ml-1 hover:text-white"><X size={10} /></button>
-                  </span>
-                ) : (
+                <span key={tag} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black border border-border text-xs font-medium text-secondary">
                   <button
-                    key={tag}
                     type="button"
                     onClick={() => {
                       onTagSelect(tag);
                       onClose();
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black border border-border text-xs font-medium text-secondary transition-colors hover:text-white hover:border-primary/40"
+                    className="flex items-center gap-1.5 hover:text-white transition-colors"
                   >
-                    <Tag size={12} /> {tag}
+                    <Tag size={12} />
+                    {tag}
                   </button>
-                )
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="ml-1 text-secondary hover:text-white transition-colors"
+                    title="Remove tag"
+                  >
+                    <X size={10} />
+                  </button>
+                </span>
               ))}
+              {editedTool.tags.length === 0 && (
+                <span className="text-xs text-gray-600 italic">No tags yet</span>
+              )}
             </div>
-             {isEditing && (
-               <button
-                 type="button"
-                 onClick={() => setAdvancedMode((prev) => !prev)}
-                 className="self-start text-[11px] uppercase tracking-[0.2em] text-secondary hover:text-primary transition-colors flex items-center gap-2"
-               >
-                 <Settings size={14} className={advancedMode ? 'text-primary' : 'text-secondary'} />
-                 {advancedMode ? 'Advanced Edit On' : 'Advanced Edit'}
-               </button>
-             )}
              {isAdmin && (
                <button
                  type="button"
@@ -1821,28 +1882,6 @@ const ToolDetail = ({
         </div>
       )}
 
-      {showUnsavedPrompt && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm pointer-events-auto">
-          <div className="bg-surface border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-fade-in-up">
-            <h3 className="text-lg font-bold text-white">Unsaved changes</h3>
-            <p className="text-sm text-secondary mt-2">Your edits have not been saved. Discard edits?</p>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={() => setShowUnsavedPrompt(false)}
-                className="px-4 py-2 rounded-full bg-surface border border-border text-white text-sm font-medium hover:bg-surfaceHover"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={discardEdits}
-                className="px-4 py-2 rounded-full bg-red-500 text-white text-sm font-bold hover:bg-red-600"
-              >
-                Discard
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
