@@ -1590,7 +1590,7 @@ const ToolDetail = ({
         </div>
 
         <div className="overflow-y-auto h-full p-6 md:p-10 custom-scrollbar">
-          <div className="mb-12 pr-24 md:pr-28">
+          <div className="mb-12 pr-36 md:pr-40">
             <div className="flex flex-col md:flex-row items-start gap-6 mb-8">
               <div className="w-24 h-24 rounded-2xl bg-black border border-border flex items-center justify-center shadow-lg overflow-hidden shrink-0 relative p-1">
                  <div className="w-full h-full rounded-xl overflow-hidden bg-surface">
@@ -1599,7 +1599,7 @@ const ToolDetail = ({
               </div>
               <div className="w-full pt-1">
                 <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap sm:flex-nowrap items-end gap-2">
+                  <div className="flex flex-wrap sm:flex-nowrap items-baseline gap-2">
                     {headerEditing ? (
                       <input
                         className="min-w-[220px] flex-1 text-3xl md:text-4xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none pb-2 leading-none"
@@ -1611,13 +1611,13 @@ const ToolDetail = ({
                     )}
                     {headerEditing ? (
                       <input
-                        className="min-w-[220px] w-full sm:w-auto max-w-[260px] bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none text-base md:text-sm pb-2 leading-none"
+                        className="min-w-[220px] w-full sm:w-auto max-w-[260px] bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none text-base md:text-sm leading-none mt-1"
                         value={fieldDrafts.url}
                         onChange={(e) => setFieldDrafts({ ...fieldDrafts, url: e.target.value })}
                         placeholder="https://"
                       />
                     ) : (
-                      <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group text-xs md:text-sm w-full sm:w-auto max-w-[260px] pb-2">
+                      <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group text-xs md:text-sm w-full sm:w-auto max-w-[260px] mt-1">
                         {editedTool.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                         <ArrowUpRight size={14} className="group-hover:text-primary transition-colors"/>
                       </a>
@@ -1637,7 +1637,7 @@ const ToolDetail = ({
                         });
                         setHeaderEditing(true);
                       }}
-                      className="h-8 w-8 flex items-center justify-center rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all shrink-0"
+                      className="h-8 w-8 flex items-center justify-center rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all shrink-0 self-end"
                       title={headerEditing ? 'Save name & URL' : 'Edit name & URL'}
                     >
                       {headerEditing ? <Check size={12} /> : <Pencil size={12} />}
