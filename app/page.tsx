@@ -1643,7 +1643,7 @@ const ToolDetail = ({
                       {headerEditing ? <Check size={12} /> : <Pencil size={12} />}
                     </button>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm">
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs md:text-sm">
                     <select
                       className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
                       value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
