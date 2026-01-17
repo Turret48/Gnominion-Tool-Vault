@@ -1598,42 +1598,42 @@ const ToolDetail = ({
                  </div>
               </div>
               <div className="w-full pt-1">
-                <div className="rounded-2xl bg-black border border-border p-5 md:p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      {headerEditing ? (
-                        <input
-                          className="w-full text-4xl md:text-5xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none pb-2"
-                          value={fieldDrafts.name}
-                          onChange={(e) => setFieldDrafts({ ...fieldDrafts, name: e.target.value })}
-                        />
-                      ) : (
-                        <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">{editedTool.name}</h1>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (headerEditing) {
-                          saveHeader();
-                          return;
-                        }
-                        setFieldDrafts({
-                          ...fieldDrafts,
-                          name: editedTool.name || '',
-                          summary: editedTool.summary || '',
-                          url: editedTool.url || ''
-                        });
-                        setHeaderEditing(true);
-                      }}
-                      className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all w-8 h-8 flex items-center justify-center"
-                      title={headerEditing ? 'Save tool info' : 'Edit tool info'}
-                    >
-                      {headerEditing ? <Check size={12} /> : <Pencil size={12} />}
-                    </button>
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex-1">
+                    {headerEditing ? (
+                      <input
+                        className="w-full text-4xl md:text-5xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none pb-2"
+                        value={fieldDrafts.name}
+                        onChange={(e) => setFieldDrafts({ ...fieldDrafts, name: e.target.value })}
+                      />
+                    ) : (
+                      <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">{editedTool.name}</h1>
+                    )}
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (headerEditing) {
+                        saveHeader();
+                        return;
+                      }
+                      setFieldDrafts({
+                        ...fieldDrafts,
+                        name: editedTool.name || '',
+                        summary: editedTool.summary || '',
+                        url: editedTool.url || ''
+                      });
+                      setHeaderEditing(true);
+                    }}
+                    className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all w-8 h-8 flex items-center justify-center"
+                    title={headerEditing ? 'Save tool info' : 'Edit tool info'}
+                  >
+                    {headerEditing ? <Check size={12} /> : <Pencil size={12} />}
+                  </button>
+                </div>
 
-                  <div className="mt-4 rounded-xl border border-border/60 bg-surface/70 px-3 py-2 flex flex-wrap items-center gap-3 text-sm">
+                <div className="rounded-2xl bg-black border border-border p-5 md:p-6">
+                  <div className="rounded-xl border border-border/60 bg-surface/70 px-3 py-2 flex flex-wrap items-center gap-3 text-sm">
                     <select 
                       className="bg-black/60 border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
                       value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
@@ -1670,7 +1670,7 @@ const ToolDetail = ({
                     )}
                   </div>
 
-                  <div className="mt-5 border-l border-border/60 pl-4">
+                  <div className="mt-5">
                     {headerEditing ? (
                       <textarea
                         className="w-full bg-black border border-border rounded-lg p-4 text-xl text-gray-300 focus:border-primary focus:outline-none transition-colors"
