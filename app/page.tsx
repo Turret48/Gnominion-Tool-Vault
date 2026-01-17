@@ -1239,7 +1239,7 @@ const NoteSection = ({
         <button
           type="button"
           onClick={() => onRequestEdit?.(field)}
-          className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
+          className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all shrink-0"
           title="Edit note"
         >
           <Pencil size={12} />
@@ -1598,75 +1598,71 @@ const ToolDetail = ({
                  </div>
               </div>
               <div className="w-full pt-1">
-                <div className="flex items-center gap-3">
-                  <div className="min-w-0 space-y-2 flex-1">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex flex-wrap items-center gap-3">
                     {headerEditing ? (
                       <input
-                        className="w-full text-3xl md:text-4xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none pb-2"
+                        className="min-w-[220px] flex-1 text-3xl md:text-4xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none pb-2"
                         value={fieldDrafts.name}
                         onChange={(e) => setFieldDrafts({ ...fieldDrafts, name: e.target.value })}
                       />
                     ) : (
                       <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">{editedTool.name}</h1>
                     )}
-                    <div className="flex items-center gap-2 text-xs md:text-sm">
-                      {headerEditing ? (
-                        <input
-                          className="min-w-[220px] bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none text-base md:text-sm"
-                          value={fieldDrafts.url}
-                          onChange={(e) => setFieldDrafts({ ...fieldDrafts, url: e.target.value })}
-                          placeholder="https://"
-                        />
-                      ) : (
-                        <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group text-xs md:text-sm">
-                          {editedTool.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                          <ArrowUpRight size={14} className="group-hover:text-primary transition-colors"/>
-                        </a>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm">
-                      <select
-                        className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
-                        value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
-                        onChange={(e) => handleCategoryChange(e.target.value)}
-                      >
-                        {categories.map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-
-                      <select
-                        className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
-                        value={editedTool.status || ToolStatus.INTERESTED}
-                        onChange={(e) => handleStatusChange(e.target.value as ToolStatus)}
-                      >
-                        {Object.values(ToolStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    </div>
+                    {headerEditing ? (
+                      <input
+                        className="min-w-[220px] w-full sm:w-auto bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none text-base md:text-sm"
+                        value={fieldDrafts.url}
+                        onChange={(e) => setFieldDrafts({ ...fieldDrafts, url: e.target.value })}
+                        placeholder="https://"
+                      />
+                    ) : (
+                      <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group text-xs md:text-sm w-full sm:w-auto">
+                        {editedTool.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                        <ArrowUpRight size={14} className="group-hover:text-primary transition-colors"/>
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (headerEditing) {
+                          saveHeader();
+                          return;
+                        }
+                        setFieldDrafts({
+                          ...fieldDrafts,
+                          name: editedTool.name || '',
+                          summary: editedTool.summary || '',
+                          url: editedTool.url || ''
+                        });
+                        setHeaderEditing(true);
+                      }}
+                      className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all shrink-0"
+                      title={headerEditing ? 'Save name & URL' : 'Edit name & URL'}
+                    >
+                      {headerEditing ? <Check size={12} /> : <Pencil size={12} />}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (headerEditing) {
-                        saveHeader();
-                        return;
-                      }
-                      setFieldDrafts({
-                        ...fieldDrafts,
-                        name: editedTool.name || '',
-                        summary: editedTool.summary || '',
-                        url: editedTool.url || ''
-                      });
-                      setHeaderEditing(true);
-                    }}
-                    className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
-                    title={headerEditing ? 'Save name & URL' : 'Edit name & URL'}
-                  >
-                    {headerEditing ? <Check size={12} /> : <Pencil size={12} />}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm">
+                    <select
+                      className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                      value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
+                      onChange={(e) => handleCategoryChange(e.target.value)}
+                    >
+                      {categories.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+
+                    <select
+                      className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                      value={editedTool.status || ToolStatus.INTERESTED}
+                      onChange={(e) => handleStatusChange(e.target.value as ToolStatus)}
+                    >
+                      {Object.values(ToolStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
                 </div>
-
-
                 {isAdmin && adminMode && (
                   <div className="mt-4">
                     <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2">Logo URL</label>
