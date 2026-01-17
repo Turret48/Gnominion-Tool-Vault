@@ -1218,19 +1218,37 @@ const NoteSection = ({
   value,
   field,
   onChange,
-  onBlur
+  onBlur,
+  showEdit
 }: {
   title: string;
   value: string;
   field: keyof Tool['notes'];
   onChange: (field: keyof Tool['notes'], value: string) => void;
   onBlur: (field: keyof Tool['notes'], value: string) => void;
+  showEdit?: boolean;
 }) => (
   <div className="mb-10 group">
-    <h3 className="text-xs font-bold text-secondary uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-border/50 pb-2">
-      {title}
+    <h3 className="text-xs font-bold text-secondary uppercase tracking-widest mb-4 flex items-center justify-between gap-2 border-b border-border/50 pb-2">
+      <span>{title}</span>
+      {showEdit && (
+        <button
+          type="button"
+          onClick={() => {
+            const el = document.getElementById(`note-${field}`);
+            if (el instanceof HTMLTextAreaElement) {
+              el.focus();
+            }
+          }}
+          className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
+          title="Edit note"
+        >
+          <Pencil size={12} />
+        </button>
+      )}
     </h3>
     <textarea
+      id={`note-${field}`}
       className="w-full min-h-[120px] bg-black border border-border rounded-xl p-4 text-gray-300 leading-relaxed focus:border-primary focus:outline-none transition-colors resize-none font-mono text-base md:text-sm"
       value={value}
       onChange={(e) => onChange(field, e.target.value)}
@@ -1562,10 +1580,10 @@ const ToolDetail = ({
                       <button
                         type="button"
                         onClick={() => saveField('name')}
-                        className="p-2 rounded-full bg-primary text-white hover:bg-primaryHover transition-all"
+                        className="p-1.5 rounded-full bg-primary text-white hover:bg-primaryHover transition-all w-8 h-8 flex items-center justify-center"
                         title="Save name"
                       >
-                        <Check size={16} />
+                        <Check size={12} />
                       </button>
                     </>
                   ) : (
@@ -1574,10 +1592,10 @@ const ToolDetail = ({
                       <button
                         type="button"
                         onClick={() => setEditingField('name')}
-                        className="p-2 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
+                        className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all w-8 h-8 flex items-center justify-center"
                         title="Edit name"
                       >
-                        <Pencil size={16} />
+                        <Pencil size={12} />
                       </button>
                     </>
                   )}
@@ -1612,7 +1630,7 @@ const ToolDetail = ({
                         <button
                           type="button"
                           onClick={() => saveField('url')}
-                          className="p-2 rounded-full bg-primary text-white hover:bg-primaryHover transition-all"
+                          className="p-1.5 rounded-full bg-primary text-white hover:bg-primaryHover transition-all w-8 h-8 flex items-center justify-center"
                           title="Save URL"
                         >
                           <Check size={14} />
@@ -1630,7 +1648,7 @@ const ToolDetail = ({
                             setFieldDrafts({ ...fieldDrafts, url: editedTool.url });
                             setEditingField('url');
                           }}
-                          className="p-2 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
+                          className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all w-8 h-8 flex items-center justify-center"
                           title="Edit URL"
                         >
                           <Pencil size={14} />
@@ -1685,10 +1703,10 @@ const ToolDetail = ({
                   setFieldDrafts({ ...fieldDrafts, summary: editedTool.summary || '' });
                   setEditingField('summary');
                 }}
-                className="p-2 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all h-9 w-9 flex items-center justify-center"
+                className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all h-8 w-8 flex items-center justify-center"
                 title={editingField === 'summary' ? 'Save summary' : 'Edit summary'}
               >
-                {editingField === 'summary' ? <Check size={14} /> : <Pencil size={14} />}
+                {editingField === 'summary' ? <Check size={12} /> : <Pencil size={12} />}
               </button>
             </div>
           </div>
@@ -1710,7 +1728,7 @@ const ToolDetail = ({
                     });
                     setEditingField('pricing');
                   }}
-                  className="p-2 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
+                  className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all w-8 h-8 flex items-center justify-center"
                   title={editingField === 'pricing' ? 'Save pricing' : 'Edit pricing'}
                 >
                   {editingField === 'pricing' ? <Check size={14} /> : <Pencil size={14} />}
@@ -1763,7 +1781,7 @@ const ToolDetail = ({
                     });
                     setEditingField('bestUseCases');
                   }}
-                  className="p-2 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
+                  className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all w-8 h-8 flex items-center justify-center"
                   title={editingField === 'bestUseCases' ? 'Save best use cases' : 'Edit best use cases'}
                 >
                   {editingField === 'bestUseCases' ? <Check size={14} /> : <Pencil size={14} />}
@@ -1794,7 +1812,7 @@ const ToolDetail = ({
             </div>
           </div>
           <div className="space-y-2">
-             <NoteSection title="What it does" value={noteDrafts.whatItDoes} field="whatItDoes" onChange={updateNotes} onBlur={saveNote} />
+             <NoteSection title="What it does" value={noteDrafts.whatItDoes} field="whatItDoes" onChange={updateNotes} onBlur={saveNote} showEdit />
              <NoteSection title="When to use" value={noteDrafts.whenToUse} field="whenToUse" onChange={updateNotes} onBlur={saveNote} />
              <NoteSection title="How to use" value={noteDrafts.howToUse} field="howToUse" onChange={updateNotes} onBlur={saveNote} />
              <NoteSection title="Gotchas & Limits" value={noteDrafts.gotchas} field="gotchas" onChange={updateNotes} onBlur={saveNote} />
