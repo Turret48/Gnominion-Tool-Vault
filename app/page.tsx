@@ -1874,7 +1874,6 @@ const ToolDetail = ({
             Added on {new Date(editedTool.createdAt).toLocaleDateString()}
           </div>
         </div>
-      </div>
 
       {showLogoPreview && logoPreviewUrl && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm pointer-events-auto">
