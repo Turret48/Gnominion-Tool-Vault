@@ -1598,7 +1598,7 @@ const ToolDetail = ({
                  </div>
               </div>
               <div className="w-full pt-1">
-                <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="flex items-center justify-between gap-4 mb-3">
                   <div className="flex-1">
                     {headerEditing ? (
                       <input
@@ -1625,64 +1625,62 @@ const ToolDetail = ({
                       });
                       setHeaderEditing(true);
                     }}
-                    className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all w-8 h-8 flex items-center justify-center"
+                    className="px-3 py-1.5 rounded-full border border-border text-xs font-semibold tracking-wide uppercase text-secondary hover:text-white hover:border-gray-500 transition-all"
                     title={headerEditing ? 'Save tool info' : 'Edit tool info'}
                   >
-                    {headerEditing ? <Check size={12} /> : <Pencil size={12} />}
+                    {headerEditing ? 'Save' : 'Edit'}
                   </button>
                 </div>
 
-                <div className="rounded-2xl bg-black border border-border p-5 md:p-6">
-                  <div className="rounded-xl border border-border/60 bg-surface/70 px-3 py-2 flex flex-wrap items-center gap-3 text-sm">
-                    <select 
-                      className="bg-black/60 border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
-                      value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
-                      onChange={(e) => handleCategoryChange(e.target.value)}
-                    >
-                      {categories.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
+                <div className="flex flex-wrap items-center gap-3 text-sm">
+                  <select 
+                    className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                    value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
+                    onChange={(e) => handleCategoryChange(e.target.value)}
+                  >
+                    {categories.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
 
-                    <select 
-                      className="bg-black/60 border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
-                      value={editedTool.status || ToolStatus.INTERESTED}
-                      onChange={(e) => handleStatusChange(e.target.value as ToolStatus)}
-                    >
-                      {Object.values(ToolStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                  <select 
+                    className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                    value={editedTool.status || ToolStatus.INTERESTED}
+                    onChange={(e) => handleStatusChange(e.target.value as ToolStatus)}
+                  >
+                    {Object.values(ToolStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
 
-                    <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
-                    {headerEditing ? (
-                      <div className="flex items-center gap-2 w-full md:w-auto">
-                        <input 
-                          className="min-w-[220px] bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none text-base md:text-sm"
-                          value={fieldDrafts.url}
-                          onChange={(e) => setFieldDrafts({ ...fieldDrafts, url: e.target.value })}
-                          placeholder="https://"
-                        />
-                      </div>
-                    ) : (
-                      <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group">
-                        {editedTool.url.replace(/^https?:\/\//, '').replace(/\/$/, '')} 
-                        <ArrowUpRight size={14} className="group-hover:text-primary transition-colors"/>
-                      </a>
-                    )}
-                  </div>
-
-                  <div className="mt-5">
-                    {headerEditing ? (
-                      <textarea
-                        className="w-full bg-black border border-border rounded-lg p-4 text-xl text-gray-300 focus:border-primary focus:outline-none transition-colors"
-                        value={fieldDrafts.summary}
-                        onChange={(e) => setFieldDrafts({ ...fieldDrafts, summary: e.target.value })}
+                  <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
+                  {headerEditing ? (
+                    <div className="flex items-center gap-2 w-full md:w-auto">
+                      <input 
+                        className="min-w-[220px] bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none text-base md:text-sm"
+                        value={fieldDrafts.url}
+                        onChange={(e) => setFieldDrafts({ ...fieldDrafts, url: e.target.value })}
+                        placeholder="https://"
                       />
-                    ) : (
-                      <p className="text-xl md:text-2xl text-gray-200 font-light leading-relaxed">
-                        {editedTool.summary}
-                      </p>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group">
+                      {editedTool.url.replace(/^https?:\/\//, '').replace(/\/$/, '')} 
+                      <ArrowUpRight size={14} className="group-hover:text-primary transition-colors"/>
+                    </a>
+                  )}
+                </div>
+
+                <div className="mt-4">
+                  {headerEditing ? (
+                    <textarea
+                      className="w-full bg-black border border-border rounded-lg p-4 text-xl text-gray-300 focus:border-primary focus:outline-none transition-colors"
+                      value={fieldDrafts.summary}
+                      onChange={(e) => setFieldDrafts({ ...fieldDrafts, summary: e.target.value })}
+                    />
+                  ) : (
+                    <p className="text-xl md:text-2xl text-gray-200 font-light leading-relaxed">
+                      {editedTool.summary}
+                    </p>
+                  )}
                 </div>
                 {isAdmin && adminMode && (
                   <div className="mt-4">
@@ -1706,8 +1704,7 @@ const ToolDetail = ({
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+</div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="p-6 rounded-2xl bg-black border border-border">
               <div className="flex items-center justify-between mb-2">
