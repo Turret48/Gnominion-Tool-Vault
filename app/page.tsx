@@ -815,7 +815,7 @@ const SettingsModal = ({
                       {defaultCategoryLookup.has(cat.toLowerCase()) ? (
                         <span className="text-[10px] text-gray-500 border border-border rounded-full px-2 py-0.5">Default</span>
                       ) : (
-                        <button className="ml-3 shrink-0 " onClick={() => removeCategory(cat)} className="text-gray-600 hover:text-red-500 transition-colors shrink-0" title="Delete category">
+                        <button onClick={() => removeCategory(cat)} className="text-gray-600 hover:text-red-500 transition-colors shrink-0" title="Delete category">
                           <Trash2 size={14} />
                         </button>
                       )}
