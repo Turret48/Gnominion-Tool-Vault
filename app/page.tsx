@@ -1632,9 +1632,10 @@ const ToolDetail = ({
                       {headerEditing ? <Check size={12} /> : <Pencil size={12} />}
                     </button>
                   </div>
-                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+
+                  <div className="mt-4 rounded-xl border border-border/60 bg-surface/70 px-3 py-2 flex flex-wrap items-center gap-3 text-sm">
                     <select 
-                      className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                      className="bg-black/60 border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
                       value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
                       onChange={(e) => handleCategoryChange(e.target.value)}
                     >
@@ -1644,7 +1645,7 @@ const ToolDetail = ({
                     </select>
 
                     <select 
-                      className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                      className="bg-black/60 border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
                       value={editedTool.status || ToolStatus.INTERESTED}
                       onChange={(e) => handleStatusChange(e.target.value as ToolStatus)}
                     >
@@ -1653,9 +1654,9 @@ const ToolDetail = ({
 
                     <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
                     {headerEditing ? (
-                      <div className="flex items-center gap-2 w-full mt-2 md:mt-0">
+                      <div className="flex items-center gap-2 w-full md:w-auto">
                         <input 
-                          className="flex-1 bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none text-base md:text-sm"
+                          className="min-w-[220px] bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none text-base md:text-sm"
                           value={fieldDrafts.url}
                           onChange={(e) => setFieldDrafts({ ...fieldDrafts, url: e.target.value })}
                           placeholder="https://"
@@ -1668,7 +1669,8 @@ const ToolDetail = ({
                       </a>
                     )}
                   </div>
-                  <div className="mt-5">
+
+                  <div className="mt-5 border-l border-border/60 pl-4">
                     {headerEditing ? (
                       <textarea
                         className="w-full bg-black border border-border rounded-lg p-4 text-xl text-gray-300 focus:border-primary focus:outline-none transition-colors"
