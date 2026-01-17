@@ -1599,7 +1599,7 @@ const ToolDetail = ({
               </div>
               <div className="w-full pt-1">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
+                  <div className="min-w-0 space-y-2">
                     {headerEditing ? (
                       <input
                         className="w-full text-3xl md:text-4xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none pb-2"
@@ -1609,7 +1609,7 @@ const ToolDetail = ({
                     ) : (
                       <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">{editedTool.name}</h1>
                     )}
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
+                    <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm">
                       <select
                         className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
                         value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
@@ -1639,7 +1639,7 @@ const ToolDetail = ({
                           />
                         </div>
                       ) : (
-                        <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group">
+                        <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group text-xs md:text-sm">
                           {editedTool.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                           <ArrowUpRight size={14} className="group-hover:text-primary transition-colors"/>
                         </a>
@@ -1668,7 +1668,7 @@ const ToolDetail = ({
                   </button>
                 </div>
 
-                <div className="mt-4 max-w-[65ch]">
+                <div className="mt-3 max-w-[65ch]">
                   {headerEditing ? (
                     <textarea
                       className="w-full bg-black border border-border rounded-lg p-4 text-lg md:text-xl text-gray-300 focus:border-primary focus:outline-none transition-colors"
@@ -1706,8 +1706,7 @@ const ToolDetail = ({
               </div>
             </div>
           </div>
-        </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="p-6 rounded-2xl bg-black border border-border">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-xs font-bold text-secondary uppercase tracking-widest">Pricing</div>
