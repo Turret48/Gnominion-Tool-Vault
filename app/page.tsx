@@ -1598,8 +1598,8 @@ const ToolDetail = ({
                  </div>
               </div>
               <div className="w-full pt-1">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 space-y-2 flex-1">
                     {headerEditing ? (
                       <input
                         className="w-full text-3xl md:text-4xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none pb-2"
@@ -1609,6 +1609,21 @@ const ToolDetail = ({
                     ) : (
                       <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight">{editedTool.name}</h1>
                     )}
+                    <div className="flex items-center gap-2 text-xs md:text-sm">
+                      {headerEditing ? (
+                        <input
+                          className="min-w-[220px] bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none text-base md:text-sm"
+                          value={fieldDrafts.url}
+                          onChange={(e) => setFieldDrafts({ ...fieldDrafts, url: e.target.value })}
+                          placeholder="https://"
+                        />
+                      ) : (
+                        <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group text-xs md:text-sm">
+                          {editedTool.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                          <ArrowUpRight size={14} className="group-hover:text-primary transition-colors"/>
+                        </a>
+                      )}
+                    </div>
                     <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm">
                       <select
                         className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
@@ -1627,23 +1642,6 @@ const ToolDetail = ({
                       >
                         {Object.values(ToolStatus).map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
-
-                      <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
-                      {headerEditing ? (
-                        <div className="flex items-center gap-2 w-full md:w-auto">
-                          <input
-                            className="min-w-[220px] bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none text-base md:text-sm"
-                            value={fieldDrafts.url}
-                            onChange={(e) => setFieldDrafts({ ...fieldDrafts, url: e.target.value })}
-                            placeholder="https://"
-                          />
-                        </div>
-                      ) : (
-                        <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group text-xs md:text-sm">
-                          {editedTool.url.replace(/^https?:\/\//, '').replace(/\/$/, '')}
-                          <ArrowUpRight size={14} className="group-hover:text-primary transition-colors"/>
-                        </a>
-                      )}
                     </div>
                   </div>
                   <button
@@ -1695,7 +1693,7 @@ const ToolDetail = ({
           </div>
 
         <div className="mb-10">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 border-b border-border/50 pb-2">
             <div className="text-xs font-bold text-secondary uppercase tracking-widest">Description</div>
             <button
               type="button"
