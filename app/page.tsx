@@ -1219,7 +1219,9 @@ const NoteSection = ({
   field,
   onChange,
   onBlur,
-  showEdit
+  showEdit,
+  isEditing,
+  onRequestEdit
 }: {
   title: string;
   value: string;
@@ -1227,6 +1229,8 @@ const NoteSection = ({
   onChange: (field: keyof Tool['notes'], value: string) => void;
   onBlur: (field: keyof Tool['notes'], value: string) => void;
   showEdit?: boolean;
+  isEditing?: boolean;
+  onRequestEdit?: (field: keyof Tool['notes']) => void;
 }) => (
   <div className="mb-10 group">
     <h3 className="text-xs font-bold text-secondary uppercase tracking-widest mb-4 flex items-center justify-between gap-2 border-b border-border/50 pb-2">
@@ -1234,12 +1238,7 @@ const NoteSection = ({
       {showEdit && (
         <button
           type="button"
-          onClick={() => {
-            const el = document.getElementById(`note-${field}`);
-            if (el instanceof HTMLTextAreaElement) {
-              el.focus();
-            }
-          }}
+          onClick={() => onRequestEdit?.(field)}
           className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
           title="Edit note"
         >
@@ -1253,6 +1252,7 @@ const NoteSection = ({
       value={value}
       onChange={(e) => onChange(field, e.target.value)}
       onBlur={(e) => onBlur(field, e.target.value)}
+      readOnly={showEdit && !isEditing}
       placeholder="Supports Markdown (e.g. **bold**, [link](url), - list)"
     />
     <p className="text-[10px] text-gray-600 mt-1 flex justify-end">Markdown Supported</p>
@@ -1280,11 +1280,13 @@ const ToolDetail = ({
 }) => {
   const [adminMode, setAdminMode] = useState(false);
   const [noteDrafts, setNoteDrafts] = useState(EMPTY_NOTES);
+  const [editingNoteField, setEditingNoteField] = useState<keyof Tool['notes'] | null>(null);
   const [showLogoPreview, setShowLogoPreview] = useState(false);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [editedTool, setEditedTool] = useState<Tool>(tool);
   const [newTag, setNewTag] = useState('');
-  const [editingField, setEditingField] = useState<null | 'name' | 'summary' | 'pricing' | 'bestUseCases' | 'url'>(null);
+  const [editingField, setEditingField] = useState<null | 'pricing' | 'bestUseCases'>(null);
+  const [headerEditing, setHeaderEditing] = useState(false);
   const [fieldDrafts, setFieldDrafts] = useState({
     name: tool.name || '',
     summary: tool.summary || '',
@@ -1316,6 +1318,7 @@ const ToolDetail = ({
       bestUseCases: (tool.bestUseCases || []).map((item) => `- ${item}`).join('\n'),
       url: tool.url || ''
     });
+    setHeaderEditing(false);
     if (tool.category && !categories.includes(tool.category)) {
       setEditedTool((prev) => ({ ...prev, category: categories[0] || 'Productivity' }));
     }
@@ -1344,6 +1347,10 @@ const ToolDetail = ({
       await onUpdate(nextTool);
     } catch (err) {
       console.error('Failed to save note', err);
+    } finally {
+      if (editingNoteField == field) {
+        setEditingNoteField(null);
+      }
     }
   };
 
@@ -1414,6 +1421,28 @@ const ToolDetail = ({
     }
   };
 
+
+  const saveHeader = async () => {
+    const name = fieldDrafts.name.trim();
+    const summary = fieldDrafts.summary.trim();
+    const url = fieldDrafts.url?.trim() || '';
+    let nextTool = editedTool;
+
+    nextTool = applyFieldUpdate('name', name);
+    nextTool = applyFieldUpdate('summary', summary);
+    nextTool = applyFieldUpdate('url', url, 'websiteUrl');
+
+    try {
+      await onUpdate(nextTool);
+      if (isAdmin && adminMode) {
+        await updateGlobalTool(editedTool.id, { name, summary, websiteUrl: url });
+      }
+    } catch (err) {
+      console.error('Failed to save header info', err);
+    } finally {
+      setHeaderEditing(false);
+    }
+  };
   const handleCategoryChange = async (value: string) => {
     const nextTool = { ...editedTool, category: value, updatedAt: Date.now() };
     setEditedTool(nextTool);
@@ -1569,92 +1598,89 @@ const ToolDetail = ({
                  </div>
               </div>
               <div className="w-full pt-1">
-                <div className="flex items-center gap-3 mb-3">
-                  {editingField === 'name' ? (
-                    <>
-                      <input
-                        className="flex-1 text-4xl md:text-5xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none pb-2"
-                        value={fieldDrafts.name}
-                        onChange={(e) => setFieldDrafts({ ...fieldDrafts, name: e.target.value })}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => saveField('name')}
-                        className="p-1.5 rounded-full bg-primary text-white hover:bg-primaryHover transition-all w-8 h-8 flex items-center justify-center"
-                        title="Save name"
-                      >
-                        <Check size={12} />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">{editedTool.name}</h1>
-                      <button
-                        type="button"
-                        onClick={() => setEditingField('name')}
-                        className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all w-8 h-8 flex items-center justify-center"
-                        title="Edit name"
-                      >
-                        <Pencil size={12} />
-                      </button>
-                    </>
-                  )}
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-sm">
-                   <select 
-                     className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
-                     value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
-                     onChange={(e) => handleCategoryChange(e.target.value)}
-                   >
-                     {categories.map((c) => (
-                       <option key={c} value={c}>{c}</option>
-                     ))}
-                   </select>
-                   
-                   <select 
-                     className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
-                     value={editedTool.status || ToolStatus.INTERESTED}
-                     onChange={(e) => handleStatusChange(e.target.value as ToolStatus)}
-                   >
-                     {Object.values(ToolStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                   </select>
+                <div className="rounded-2xl bg-black border border-border p-5 md:p-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      {headerEditing ? (
+                        <input
+                          className="w-full text-4xl md:text-5xl font-bold text-white bg-transparent border-b border-border focus:border-primary focus:outline-none pb-2"
+                          value={fieldDrafts.name}
+                          onChange={(e) => setFieldDrafts({ ...fieldDrafts, name: e.target.value })}
+                        />
+                      ) : (
+                        <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">{editedTool.name}</h1>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (headerEditing) {
+                          saveHeader();
+                          return;
+                        }
+                        setFieldDrafts({
+                          ...fieldDrafts,
+                          name: editedTool.name || '',
+                          summary: editedTool.summary || '',
+                          url: editedTool.url || ''
+                        });
+                        setHeaderEditing(true);
+                      }}
+                      className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all w-8 h-8 flex items-center justify-center"
+                      title={headerEditing ? 'Save tool info' : 'Edit tool info'}
+                    >
+                      {headerEditing ? <Check size={12} /> : <Pencil size={12} />}
+                    </button>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+                    <select 
+                      className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                      value={categories.includes(editedTool.category) ? editedTool.category : (categories[0] || 'Productivity')}
+                      onChange={(e) => handleCategoryChange(e.target.value)}
+                    >
+                      {categories.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
 
-                   <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
-                   {editingField === 'url' ? (
+                    <select 
+                      className="bg-black border border-border text-white rounded px-2 py-1 focus:border-primary focus:outline-none text-base md:text-sm"
+                      value={editedTool.status || ToolStatus.INTERESTED}
+                      onChange={(e) => handleStatusChange(e.target.value as ToolStatus)}
+                    >
+                      {Object.values(ToolStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+
+                    <span className="hidden md:inline w-1 h-1 rounded-full bg-gray-700 mx-1"></span>
+                    {headerEditing ? (
                       <div className="flex items-center gap-2 w-full mt-2 md:mt-0">
                         <input 
                           className="flex-1 bg-transparent text-secondary border-b border-border focus:border-primary focus:outline-none text-base md:text-sm"
                           value={fieldDrafts.url}
                           onChange={(e) => setFieldDrafts({ ...fieldDrafts, url: e.target.value })}
+                          placeholder="https://"
                         />
-                        <button
-                          type="button"
-                          onClick={() => saveField('url')}
-                          className="p-1.5 rounded-full bg-primary text-white hover:bg-primaryHover transition-all w-8 h-8 flex items-center justify-center"
-                          title="Save URL"
-                        >
-                          <Check size={14} />
-                        </button>
                       </div>
-                   ) : (
-                      <div className="flex items-center gap-2">
-                        <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group">
-                          {editedTool.url.replace(/^https?:\/\//, '').replace(/\/$/, '')} 
-                          <ArrowUpRight size={14} className="group-hover:text-primary transition-colors"/>
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setFieldDrafts({ ...fieldDrafts, url: editedTool.url });
-                            setEditingField('url');
-                          }}
-                          className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all w-8 h-8 flex items-center justify-center"
-                          title="Edit URL"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                      </div>
-                   )}
+                    ) : (
+                      <a href={editedTool.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white flex items-center gap-1.5 transition-colors group">
+                        {editedTool.url.replace(/^https?:\/\//, '').replace(/\/$/, '')} 
+                        <ArrowUpRight size={14} className="group-hover:text-primary transition-colors"/>
+                      </a>
+                    )}
+                  </div>
+                  <div className="mt-5">
+                    {headerEditing ? (
+                      <textarea
+                        className="w-full bg-black border border-border rounded-lg p-4 text-xl text-gray-300 focus:border-primary focus:outline-none transition-colors"
+                        value={fieldDrafts.summary}
+                        onChange={(e) => setFieldDrafts({ ...fieldDrafts, summary: e.target.value })}
+                      />
+                    ) : (
+                      <p className="text-xl md:text-2xl text-gray-200 font-light leading-relaxed">
+                        {editedTool.summary}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 {isAdmin && adminMode && (
                   <div className="mt-4">
@@ -1679,37 +1705,6 @@ const ToolDetail = ({
                 )}
               </div>
             </div>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                {editingField === 'summary' ? (
-                  <textarea
-                    className="w-full bg-black border border-border rounded-lg p-4 text-xl text-gray-300 focus:border-primary focus:outline-none transition-colors"
-                    value={fieldDrafts.summary}
-                    onChange={(e) => setFieldDrafts({ ...fieldDrafts, summary: e.target.value })}
-                  />
-                ) : (
-                  <p className="text-xl md:text-2xl text-gray-200 font-light leading-relaxed">
-                    {editedTool.summary}
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  if (editingField === 'summary') {
-                    saveField('summary');
-                    return;
-                  }
-                  setFieldDrafts({ ...fieldDrafts, summary: editedTool.summary || '' });
-                  setEditingField('summary');
-                }}
-                className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all h-8 w-8 flex items-center justify-center"
-                title={editingField === 'summary' ? 'Save summary' : 'Edit summary'}
-              >
-                {editingField === 'summary' ? <Check size={12} /> : <Pencil size={12} />}
-              </button>
-            </div>
-          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="p-6 rounded-2xl bg-black border border-border">
               <div className="flex items-center justify-between mb-2">
@@ -1812,7 +1807,13 @@ const ToolDetail = ({
             </div>
           </div>
           <div className="space-y-2">
-             <NoteSection title="What it does" value={noteDrafts.whatItDoes} field="whatItDoes" onChange={updateNotes} onBlur={saveNote} showEdit />
+             <NoteSection title="What it does" value={noteDrafts.whatItDoes} field="whatItDoes" onChange={updateNotes} onBlur={saveNote} showEdit isEditing={editingNoteField === 'whatItDoes'} onRequestEdit={(field) => {
+               setEditingNoteField(field);
+               const el = document.getElementById(`note-${field}`);
+               if (el instanceof HTMLTextAreaElement) {
+                 el.focus();
+               }
+             }} />
              <NoteSection title="When to use" value={noteDrafts.whenToUse} field="whenToUse" onChange={updateNotes} onBlur={saveNote} />
              <NoteSection title="How to use" value={noteDrafts.howToUse} field="howToUse" onChange={updateNotes} onBlur={saveNote} />
              <NoteSection title="Gotchas & Limits" value={noteDrafts.gotchas} field="gotchas" onChange={updateNotes} onBlur={saveNote} />
