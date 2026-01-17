@@ -1285,7 +1285,7 @@ const ToolDetail = ({
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [editedTool, setEditedTool] = useState<Tool>(tool);
   const [newTag, setNewTag] = useState('');
-  const [editingField, setEditingField] = useState<null | 'pricing' | 'bestUseCases'>(null);
+  const [editingField, setEditingField] = useState<null | 'pricing' | 'bestUseCases' | 'summary'>(null);
   const [headerEditing, setHeaderEditing] = useState(false);
   const [fieldDrafts, setFieldDrafts] = useState({
     name: tool.name || '',
@@ -1661,26 +1661,13 @@ const ToolDetail = ({
                       });
                       setHeaderEditing(true);
                     }}
-                    className="px-3 py-1.5 rounded-full border border-border text-xs font-semibold tracking-wide uppercase text-secondary hover:text-white hover:border-gray-500 transition-all"
-                    title={headerEditing ? 'Save tool info' : 'Edit tool info'}
+                    className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
+                    title={headerEditing ? 'Save name & URL' : 'Edit name & URL'}
                   >
-                    {headerEditing ? 'Save' : 'Edit'}
+                    {headerEditing ? <Check size={12} /> : <Pencil size={12} />}
                   </button>
                 </div>
 
-                <div className="mt-4 max-w-[65ch]">
-                  {headerEditing ? (
-                    <textarea
-                      className="w-full bg-black border border-border rounded-lg p-4 text-lg md:text-xl text-gray-300 focus:border-primary focus:outline-none transition-colors"
-                      value={fieldDrafts.summary}
-                      onChange={(e) => setFieldDrafts({ ...fieldDrafts, summary: e.target.value })}
-                    />
-                  ) : (
-                    <p className="text-lg md:text-xl text-gray-200 font-light leading-relaxed">
-                      {editedTool.summary}
-                    </p>
-                  )}
-                </div>
 
                 {isAdmin && adminMode && (
                   <div className="mt-4">
@@ -1706,6 +1693,38 @@ const ToolDetail = ({
               </div>
             </div>
           </div>
+
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-xs font-bold text-secondary uppercase tracking-widest">Description</div>
+            <button
+              type="button"
+              onClick={() => {
+                if (editingField === 'summary') {
+                  saveField('summary');
+                  return;
+                }
+                setFieldDrafts({ ...fieldDrafts, summary: editedTool.summary || '' });
+                setEditingField('summary');
+              }}
+              className="p-1.5 rounded-full bg-black border border-border text-secondary hover:text-white hover:border-gray-500 transition-all"
+              title={editingField === 'summary' ? 'Save description' : 'Edit description'}
+            >
+              {editingField === 'summary' ? <Check size={14} /> : <Pencil size={14} />}
+            </button>
+          </div>
+          {editingField === 'summary' ? (
+            <textarea
+              className="w-full min-h-[140px] bg-black border border-border rounded-lg p-4 text-lg md:text-xl text-gray-300 focus:border-primary focus:outline-none transition-colors"
+              value={fieldDrafts.summary}
+              onChange={(e) => setFieldDrafts({ ...fieldDrafts, summary: e.target.value })}
+            />
+          ) : (
+            <p className="text-lg md:text-xl text-gray-200 font-light leading-relaxed max-w-[65ch]">
+              {editedTool.summary}
+            </p>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <div className="p-6 rounded-2xl bg-black border border-border">
               <div className="flex items-center justify-between mb-2">
